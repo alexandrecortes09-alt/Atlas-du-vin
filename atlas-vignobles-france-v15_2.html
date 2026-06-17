@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Atlas des Vignobles de France — v3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,900&family=Spectral:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<style>
+  :root{--bg:#1c1014;--gold:#c9a24b;--gold-soft:#e0c483;--parch:#f4ece0;--parch2:#ece0cf;--ink:#2c1c1a;--ink-soft:#6b554d;--wine:#7b1e2b;}
+  *{box-sizing:border-box;} html,body{margin:0;padding:0;}
+  body{font-family:'Spectral',Georgia,serif;
+    background:radial-gradient(1200px 700px at 25% -10%, #3a2028 0%, rgba(58,32,40,0) 55%),
+      radial-gradient(900px 600px at 110% 120%, #3a2433 0%, rgba(58,36,51,0) 55%), var(--bg);
+    color:var(--parch);min-height:100vh;-webkit-font-smoothing:antialiased;}
+  body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.05;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}
+  .wrap{position:relative;z-index:1;max-width:1280px;margin:0 auto;padding:34px 24px 60px;}
+  header.head{text-align:center;margin-bottom:20px;}
+  .kicker{font-family:'Spectral';font-weight:500;letter-spacing:.42em;text-transform:uppercase;font-size:11px;color:var(--gold-soft);margin:0 0 10px;padding-left:.42em;}
+  h1{font-family:'Fraunces';font-weight:900;font-size:clamp(32px,5.5vw,58px);line-height:.96;margin:0;color:var(--parch);text-shadow:0 2px 30px rgba(0,0,0,.4);}
+  h1 em{font-style:italic;font-weight:500;color:var(--gold-soft);}
+  .hint{font-style:italic;color:#cdbdb0;margin:12px auto 0;max-width:600px;font-size:15px;font-weight:300;}
+  .layout{display:grid;grid-template-columns:1.1fr .9fr;gap:24px;align-items:start;transition:grid-template-columns .55s ease;}
+  .layout.focused{grid-template-columns:.7fr 1.3fr;}
+  @media(max-width:880px){.layout{grid-template-columns:1fr;}.layout.focused{grid-template-columns:1fr;}}
+  .mapcard{position:relative;border:1px solid rgba(201,162,75,.28);border-radius:18px;
+    background:linear-gradient(160deg,rgba(255,255,255,.03),rgba(0,0,0,.18));padding:8px;overflow:hidden;min-height:420px;
+    box-shadow:0 30px 60px -30px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.05);}
+  svg#map{width:100%;height:auto;display:block;cursor:grab;}
+  svg#map:active{cursor:grabbing;}
+  .land{fill:#241319;stroke:rgba(201,162,75,.6);stroke-width:1;stroke-linejoin:round;filter:drop-shadow(0 14px 26px rgba(0,0,0,.5));vector-effect:non-scaling-stroke;}
+  .region{cursor:pointer;stroke-width:1.1;vector-effect:non-scaling-stroke;transition:fill-opacity .35s,opacity .35s;}
+  .region:hover{fill-opacity:.9 !important;}
+  .subzone{vector-effect:non-scaling-stroke;pointer-events:none;transition:fill-opacity .3s;}
+  .subs{opacity:0;transition:opacity .45s;}.subs.show{opacity:1;}
+  .subs.show .subzone{pointer-events:auto;cursor:pointer;}
+  .subs.show .subzone:hover{fill-opacity:.9 !important;}
+  .reglabel-g{pointer-events:none;transition:opacity .3s;}
+  .reglabel-t{font-family:'Fraunces';font-weight:600;fill:#f6ecdd;paint-order:stroke;stroke:rgba(20,10,14,.92);stroke-width:3.4px;stroke-linejoin:round;pointer-events:none;text-anchor:middle;}
+  .river{fill:none;stroke:#7fa8c9;stroke-opacity:.6;stroke-width:1.3;vector-effect:non-scaling-stroke;}
+  .riv-t{font-family:'Spectral';font-style:italic;fill:#9cc3e0;pointer-events:none;text-anchor:middle;paint-order:stroke;stroke:rgba(20,10,14,.85);stroke-width:2.6px;stroke-linejoin:round;}
+  .city-t{font-family:'Spectral';font-weight:500;fill:#f2e7d6;pointer-events:none;text-anchor:middle;paint-order:stroke;stroke:rgba(20,10,14,.9);stroke-width:2.8px;stroke-linejoin:round;}
+  .city-dot{fill:#f2e7d6;stroke:#1c1014;stroke-width:.8;}
+  .relief{fill:#9b8468;opacity:.14;pointer-events:none;}
+  .sublabel{font-family:'Spectral';font-weight:600;font-size:12px;fill:#f6ecdd;pointer-events:none;text-anchor:middle;}
+  .sublabel-bg{fill:rgba(28,16,20,.86);stroke:rgba(201,162,75,.55);stroke-width:1;vector-effect:non-scaling-stroke;}
+  .sublabel-g{opacity:0;transition:opacity .45s;pointer-events:none;}
+  .sublabel-g.show{opacity:1;}
+  .loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--gold-soft);font-style:italic;font-size:15px;text-align:center;padding:30px;}
+  .panel{background:linear-gradient(175deg,var(--parch),var(--parch2));color:var(--ink);border-radius:18px;min-height:560px;position:relative;overflow:hidden;box-shadow:0 30px 60px -28px rgba(0,0,0,.65);border:1px solid rgba(0,0,0,.06);}
+  .panel::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;background:radial-gradient(600px 300px at 90% -10%, rgba(201,162,75,.18), transparent 60%);}
+  .panel-inner{position:relative;padding:26px 30px 32px;}
+  .empty{display:flex;flex-direction:column;justify-content:center;height:100%;min-height:560px;text-align:center;padding:40px;}
+  .empty .glyph{font-family:'Fraunces';font-size:54px;color:var(--wine);opacity:.85;margin-bottom:6px;}
+  .empty h2{font-family:'Fraunces';font-weight:600;font-size:24px;margin:0 0 10px;color:var(--ink);}
+  .empty p{color:var(--ink-soft);font-size:15px;line-height:1.6;margin:0 auto;max-width:340px;}
+  .crumbs{font-size:13px;font-weight:500;color:var(--ink);margin:0 0 16px;letter-spacing:.01em;background:rgba(123,30,43,.07);border:1px solid rgba(123,30,43,.18);border-radius:30px;padding:7px 14px;display:inline-block;}
+  .crumbs .c{cursor:pointer;color:var(--wine);font-weight:600;}
+  .crumbs .c:hover{text-decoration:underline;}
+  .crumbs .sep{margin:0 8px;color:var(--gold);font-weight:700;}
+  .crumbs .cur{font-weight:700;color:var(--ink);}
+  .resetbtn{position:absolute;top:14px;left:14px;z-index:6;font-family:'Spectral';font-size:13px;letter-spacing:.03em;border:1px solid rgba(201,162,75,.55);background:rgba(28,16,20,.8);color:var(--gold-soft);border-radius:30px;padding:8px 16px;cursor:pointer;backdrop-filter:blur(4px);transition:.2s;opacity:0;pointer-events:none;box-shadow:0 6px 18px -8px rgba(0,0,0,.7);}
+  .resetbtn.show{opacity:1;pointer-events:auto;}
+  .resetbtn:hover{background:var(--gold);color:#241218;}
+  .tier{font-family:'Spectral';text-transform:uppercase;letter-spacing:.26em;font-size:10.5px;color:var(--gold);font-weight:600;margin:0 0 4px;}
+  .rname{font-family:'Fraunces';font-weight:900;font-size:clamp(30px,4vw,44px);line-height:1;margin:0 0 4px;}
+  .statline{font-size:12.5px;color:#8a7466;font-style:italic;margin:-8px 0 16px;}
+  .lead{font-size:15px;font-style:italic;color:#5a463c;line-height:1.6;}
+  .accent-rule{height:4px;width:60px;border-radius:3px;margin:12px 0 18px;}
+  section.block{margin-bottom:16px;animation:rise .45s ease both;}
+  @keyframes rise{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+  .block h3{font-family:'Fraunces';font-size:18px;font-weight:600;letter-spacing:.01em;color:var(--wine);margin:0 0 9px;display:flex;align-items:center;gap:10px;}
+  .block h3::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,rgba(123,30,43,.3),transparent);}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;}
+  .chip{font-size:13px;padding:5px 11px;border-radius:30px;background:rgba(44,28,26,.06);border:1px solid rgba(44,28,26,.14);color:var(--ink);}
+  .chip.grape{background:rgba(123,30,43,.08);border-color:rgba(123,30,43,.24);cursor:pointer;transition:.15s;}
+  .chip.grape::after{content:" ›";color:var(--wine);opacity:.6;}
+  .chip.grape:hover{background:var(--wine);color:#fff;}
+  .chip.grape:hover::after{color:#fff;}
+  .chip.dom{font-family:'Fraunces';font-weight:500;background:rgba(201,162,75,.14);border-color:rgba(201,162,75,.4);}
+  .chip.type{background:rgba(60,90,120,.08);border-color:rgba(60,90,120,.2);}
+  .chip.aoc{font-variant:small-caps;letter-spacing:.03em;}
+  .sublink{cursor:pointer;}
+  .sublink::after{content:" ›";color:var(--wine);opacity:.6;}
+  .sublink:hover{background:var(--wine);color:#fff;}
+  .sublink:hover::after{color:#fff;}
+  .stats{display:flex;gap:10px;flex-wrap:wrap;}
+  .stat{flex:1;min-width:130px;background:rgba(44,28,26,.05);border:1px solid rgba(44,28,26,.12);border-radius:11px;padding:11px 13px;}
+  .stat .lab{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--ink-soft);font-weight:600;}
+  .stat .val{font-family:'Fraunces';font-weight:600;font-size:19px;margin-top:3px;color:var(--ink);}
+  .mill{display:flex;gap:10px;flex-wrap:wrap;}
+  .mill .col{flex:1;min-width:130px;}
+  .mill .lab{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px;}
+  .mill .best{color:#2f7a3e;} .mill .worst{color:#9a3526;}
+  .prose{font-size:14px;line-height:1.55;color:#4a382f;margin:0;}
+  .ph{color:#a08c7e;font-style:italic;font-weight:400;}
+  .footnote{margin-top:24px;text-align:center;color:#9c8a7e;font-size:12.5px;font-style:italic;line-height:1.6;}
+  .footnote b{color:var(--gold-soft);font-style:normal;font-weight:500;}
+  /* Toolbar */
+  .toolbar{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;justify-content:space-between;margin:0 0 18px;padding:12px 14px;border:1px solid rgba(201,162,75,.25);border-radius:14px;background:linear-gradient(160deg,rgba(255,255,255,.04),rgba(0,0,0,.16));}
+  .tzone{display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
+  .tzone+.tzone{border-left:1px solid rgba(201,162,75,.18);padding-left:16px;}
+  .dd{position:relative;}
+  .ddbtn{font-family:'Spectral';font-size:12.5px;cursor:pointer;border-radius:30px;padding:8px 13px;transition:.15s;border:1px solid rgba(201,162,75,.4);background:transparent;color:var(--gold-soft);display:flex;align-items:center;gap:6px;}
+  .ddbtn:hover{background:rgba(201,162,75,.12);}
+  .ddbtn.open{background:var(--gold);color:#241218;border-color:var(--gold);}
+  .ddbtn.wine{border-color:var(--wine);color:#e6a9b2;}
+  .ddbtn.wine:hover{background:rgba(123,30,43,.18);}
+  .ddbtn.wine.open{background:var(--wine);color:#fbeef0;}
+  .ddbtn .caret{font-style:normal;font-size:10px;opacity:.8;}
+  .ddbtn.active-filter{box-shadow:0 0 0 2px rgba(201,162,75,.35);}
+  .ddpanel{display:none;position:absolute;top:calc(100% + 7px);left:0;z-index:40;min-width:180px;flex-direction:column;gap:6px;padding:12px;border:1px solid rgba(201,162,75,.35);border-radius:12px;background:#241318;box-shadow:0 24px 50px -18px rgba(0,0,0,.8);}
+  .dd.open .ddpanel{display:flex;}
+  .ddpanel .cfilter,.ddpanel .gtog,.ddpanel .caveact{text-align:left;width:100%;}
+  .ddpanel select{font-family:'Spectral';font-size:13px;color:var(--parch);background:rgba(0,0,0,.3);border:1px solid rgba(201,162,75,.35);border-radius:8px;padding:8px 10px;outline:none;}
+  .ddpanel select option{color:#222;}
+  .gtog,.caveact{font-family:'Spectral';font-size:12.5px;cursor:pointer;border-radius:30px;padding:7px 12px;transition:.15s;border:1px solid rgba(201,162,75,.4);background:transparent;color:var(--gold-soft);}
+  .gtog:hover,.caveact:hover{background:rgba(201,162,75,.12);}
+  .gtog.on{background:var(--gold);color:#241218;border-color:var(--gold);font-weight:500;}
+  .caveact{border-color:var(--wine);color:#e6a9b2;}
+  .caveact:hover{background:rgba(123,30,43,.18);}
+  .tbl-search{position:relative;min-width:150px;}
+  .cep-direct{font-family:'Spectral';font-size:12.5px;color:var(--gold-soft);background:transparent;border:1px solid rgba(201,162,75,.4);border-radius:30px;padding:8px 12px;outline:none;cursor:pointer;max-width:190px;transition:.15s;}
+  .cep-direct:hover{background:rgba(201,162,75,.12);}
+  .cep-direct option{color:#222;background:#f3e9d8;}
+  .cep-direct.active-filter{box-shadow:0 0 0 2px rgba(201,162,75,.35);background:rgba(201,162,75,.1);color:var(--gold);}
+  .tbl-search input{width:100%;font-family:'Spectral';font-size:14px;color:var(--parch);background:rgba(0,0,0,.25);border:1px solid rgba(201,162,75,.3);border-radius:30px;padding:9px 14px 9px 34px;outline:none;}
+  .tbl-search input::placeholder{color:#b8a597;font-style:italic;}
+  .tbl-search input:focus{border-color:var(--gold);}
+  .tbl-search svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);opacity:.7;}
+  .tbl-filters{display:flex;flex-wrap:wrap;gap:5px;align-items:center;}
+  .cfilter{font-family:'Spectral';font-size:12px;cursor:pointer;background:transparent;border:1px solid rgba(201,162,75,.4);color:var(--gold-soft);border-radius:30px;padding:6px 11px;transition:.15s;}
+  .cfilter:hover{background:rgba(201,162,75,.12);}
+  .cfilter.on{background:var(--gold);color:#241218;border-color:var(--gold);font-weight:500;}
+  #cepFilter{font-family:'Spectral';font-size:12.5px;color:var(--parch);background:rgba(0,0,0,.25);border:1px solid rgba(201,162,75,.35);border-radius:30px;padding:7px 12px;outline:none;max-width:180px;}
+  #cepFilter option{color:#222;}
+  .tbl-actions{display:flex;flex-wrap:wrap;gap:6px;}
+  .tbtn{font-family:'Spectral';font-size:12.5px;cursor:pointer;border-radius:30px;padding:7px 13px;transition:.15s;border:1px solid var(--wine);background:var(--wine);color:#fbeef0;letter-spacing:.02em;}
+  .tbtn:hover{background:#92283a;}
+  .tbtn.ghost{background:transparent;color:#e6a9b2;}
+  .tbtn.ghost:hover{background:rgba(123,30,43,.18);}
+  .tbtn.gold{border-color:rgba(201,162,75,.5);background:transparent;color:var(--gold-soft);}
+  .tbtn.gold.on,.tbtn.gold:hover{background:var(--gold);color:#241218;}
+  /* badges carte */
+  .cbadge circle{fill:var(--wine);stroke:#1c1014;stroke-width:1.4;}
+  .cbadge text{fill:#fbeef0;font-family:'Spectral';font-weight:700;text-anchor:middle;}
+  /* Cave dans panneau */
+  .cave-block{background:rgba(123,30,43,.06);border:1px solid rgba(123,30,43,.18);border-radius:12px;padding:13px 15px;margin-top:6px;}
+  .cave-block h3{color:var(--wine);}
+  .cave-list{list-style:none;margin:6px 0 0;padding:0;}
+  .cave-list li{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px dashed rgba(123,30,43,.2);font-size:13.5px;}
+  .cave-list li:last-child{border-bottom:none;}
+  .cave-list .nm{font-family:'Fraunces';font-weight:500;}
+  .cave-list .meta{color:var(--ink-soft);font-size:12px;font-style:italic;}
+  .cave-list .del{margin-left:auto;cursor:pointer;border:none;background:none;color:var(--wine);font-size:15px;opacity:.55;}
+  .cave-list .del:hover{opacity:1;}
+  .cave-empty{color:var(--ink-soft);font-style:italic;font-size:13px;margin:4px 0 0;}
+  .addhere{margin-top:9px;font-family:'Spectral';font-size:12px;cursor:pointer;background:transparent;border:1px dashed var(--wine);color:var(--wine);border-radius:30px;padding:6px 13px;}
+  .addhere:hover{background:rgba(123,30,43,.1);}
+  /* Dashboard */
+  .dash h2{font-family:'Fraunces';font-weight:900;font-size:30px;margin:0 0 14px;}
+  .dcards{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px;}
+  .dcard{flex:1;min-width:120px;background:rgba(44,28,26,.05);border:1px solid rgba(44,28,26,.12);border-radius:12px;padding:13px 14px;}
+  .dcard .lab{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--ink-soft);font-weight:600;}
+  .dcard .val{font-family:'Fraunces';font-weight:700;font-size:24px;margin-top:4px;}
+  .dbar{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:13px;}
+  .dbar-l{width:34%;color:var(--ink);}
+  .dbar-track{flex:1;height:9px;background:rgba(44,28,26,.08);border-radius:6px;overflow:hidden;}
+  .dbar-fill{height:100%;background:var(--wine);border-radius:6px;}
+  .dbar-v{width:46px;text-align:right;font-family:'Fraunces';font-weight:600;color:var(--ink);}
+  .soon li{font-size:13.5px;padding:5px 0;border-bottom:1px dashed rgba(44,28,26,.12);}
+  .soon .tag{font-size:10.5px;font-weight:600;border-radius:20px;padding:2px 8px;margin-left:6px;}
+  .soon .now{background:#fff0d6;color:#9a6b1a;} .soon .past{background:#fde2dd;color:#9a3526;}
+  /* Modal */
+  .overlay{position:fixed;inset:0;z-index:50;background:rgba(15,8,11,.72);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;padding:20px;}
+  .overlay.open{display:flex;}
+  .modal{width:100%;max-width:460px;max-height:90vh;overflow:auto;background:linear-gradient(175deg,var(--parch),var(--parch2));color:var(--ink);border-radius:16px;padding:24px;box-shadow:0 40px 80px -20px rgba(0,0,0,.7);}
+  .modal h2{font-family:'Fraunces';font-weight:600;font-size:22px;margin:0 0 4px;}
+  .modal p.tag{color:var(--ink-soft);font-style:italic;font-size:13px;margin:0 0 16px;}
+  .field{margin-bottom:11px;} .field label{display:block;font-family:'Spectral';text-transform:uppercase;letter-spacing:.1em;font-size:10px;font-weight:600;color:var(--wine);margin-bottom:4px;}
+  .field input,.field select{width:100%;font-family:'Spectral';font-size:14px;color:var(--ink);background:#fff;border:1px solid rgba(44,28,26,.22);border-radius:8px;padding:8px 10px;outline:none;}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:9px;} .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;}
+  .modal-actions{display:flex;gap:9px;justify-content:flex-end;margin-top:16px;}
+  .modal-actions button{font-family:'Spectral';font-size:13.5px;border-radius:30px;padding:9px 17px;cursor:pointer;}
+  .btn-primary{background:var(--wine);color:#fff;border:1px solid var(--wine);} .btn-primary:hover{background:#92283a;}
+  .btn-cancel{background:transparent;border:1px solid rgba(44,28,26,.25);color:var(--ink-soft);}
+  .csvhint{font-size:11.5px;color:var(--ink-soft);margin-top:10px;line-height:1.5;}
+  .csvhint code{background:rgba(44,28,26,.07);padding:1px 5px;border-radius:4px;font-size:11px;}
+  .linklike{color:var(--wine);cursor:pointer;text-decoration:underline;}
+  .gmodal{max-width:720px;}
+  .gsearch input{width:100%;font-family:'Spectral';font-size:14px;color:var(--ink);background:#fff;border:1px solid rgba(44,28,26,.22);border-radius:30px;padding:9px 14px;outline:none;margin-bottom:12px;}
+  .gsearch input:focus{border-color:var(--wine);}
+  .gcat{font-family:'Spectral';text-transform:uppercase;letter-spacing:.16em;font-size:11px;font-weight:600;color:var(--wine);margin:16px 0 8px;border-bottom:1px solid rgba(123,30,43,.2);padding-bottom:4px;}
+  .gterm{margin:0 0 9px;font-size:13.5px;line-height:1.5;}
+  .gterm b{font-family:'Fraunces';font-weight:600;}
+  .gnone{color:var(--ink-soft);font-style:italic;}
+  body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.05;background-size:220px;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220' viewBox='0 0 220 220'%3E%3Cg fill='none' stroke='%23e0c483' stroke-width='1.1'%3E%3Ccircle cx='60' cy='64' r='7'/%3E%3Ccircle cx='74' cy='70' r='7'/%3E%3Ccircle cx='66' cy='80' r='7'/%3E%3Cpath d='M67 54 q4 -16 20 -20'/%3E%3Cpath d='M87 34 q16 2 13 18 q-16 -1 -13 -18'/%3E%3C/g%3E%3C/svg%3E");}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="head">
+    <p class="kicker">Atlas interactif &middot; navigation à plusieurs niveaux</p>
+    <h1>Les <em>Vignobles</em> de France</h1>
+    <p class="hint">Cliquez une région, puis une sous-région pour descendre d'un niveau, puis un cépage pour ses arômes &amp; accords. Le fil d'Ariane permet de remonter.</p>
+  </header>
+  <div class="toolbar">
+    <div class="tzone">
+      <div class="tbl-search">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#e0c483" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+        <input id="search" type="text" placeholder="Rechercher…">
+      </div>
+      <div class="dd" id="dd-type">
+        <button class="ddbtn" data-dd="type">Type de vin <i class="caret">▾</i></button>
+        <div class="ddpanel">
+          <button class="cfilter" data-color="Rouge">Rouge</button>
+          <button class="cfilter" data-color="Blanc">Blanc</button>
+          <button class="cfilter" data-color="Rosé">Rosé</button>
+          <button class="cfilter" data-color="Effervescent">Bulles</button>
+          <button class="cfilter" data-color="Liquoreux">Doux</button>
+        </div>
+      </div>
+      <select id="cepFilter" class="cep-direct"><option value="">Tous les cépages</option></select>
+    </div>
+    <div class="tzone">
+      <div class="dd" id="dd-geo">
+        <button class="ddbtn" data-dd="geo">Géographie <i class="caret">▾</i></button>
+        <div class="ddpanel">
+          <button class="gtog" id="cityBtn">Villes</button>
+          <button class="gtog" id="rivBtn">Fleuves</button>
+          <button class="gtog" id="relBtn">Relief</button>
+          <button class="gtog on" id="regBtn">Noms de régions</button>
+        </div>
+      </div>
+      <button class="tbtn gold" id="badgeBtn">Compteur cave</button>
+    </div>
+    <div class="tzone">
+      <div class="dd" id="dd-cave">
+        <button class="ddbtn wine" data-dd="cave">Ma cave <i class="caret">▾</i></button>
+        <div class="ddpanel">
+          <button class="caveact" id="addBtn">Ajouter un vin</button>
+          <button class="caveact" id="impBtn">Importer</button>
+          <button class="caveact" id="expBtn">Exporter</button>
+        </div>
+      </div>
+      <button class="tbtn gold" id="dashBtn">Tableau de bord</button>
+      <button class="tbtn gold" id="glossBtn">Glossaire</button>
+      <input type="file" id="impFile" accept=".csv,.json,application/json,text/csv" style="display:none">
+    </div>
+  </div>
+  <div class="layout" id="layout">
+    <div class="mapcard">
+      <button class="resetbtn" id="resetBtn">&#8634; Vue France</button>
+      <div class="loading" id="loading">Chargement du fond de carte&hellip;</div>
+      <svg id="map" role="img" aria-label="Carte des vignobles de France"></svg>
+    </div>
+    <aside class="panel" id="panel"></aside>
+  </div>
+  <p class="footnote">Superficies &amp; productions : <b>ordres de grandeur</b> annuels. Millésimes : généralisations par sous-région, le talent du vigneron prime. Fond <b>IGN/INSEE</b>, zones viticoles indicatives. « Ma cave » vit en mémoire — <b>Exporter</b> pour conserver, <b>Importer</b> pour recharger.</p>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h2>Ajouter un vin</h2>
+    <p class="tag">Renseignez votre bouteille et rattachez-la à sa région.</p>
+    <div class="field"><label>Nom du vin</label><input id="f_name" type="text" placeholder="ex : Vouvray Sec — Clos Naudin"></div>
+    <div class="row2">
+      <div class="field"><label>Région</label><select id="f_region"></select></div>
+      <div class="field"><label>Sous-région</label><select id="f_sub"><option value="">—</option></select></div>
+    </div>
+    <div class="row3">
+      <div class="field"><label>Couleur</label><select id="f_color"><option>Rouge</option><option>Blanc</option><option>Rosé</option><option>Effervescent</option><option>Liquoreux</option><option>Orange</option></select></div>
+      <div class="field"><label>Millésime</label><input id="f_vintage" type="text" placeholder="2020"></div>
+      <div class="field"><label>Quantité</label><input id="f_qty" type="number" min="1" value="1"></div>
+    </div>
+    <div class="row3">
+      <div class="field"><label>Prix (€/bt)</label><input id="f_price" type="number" min="0" step="0.01" placeholder="32"></div>
+      <div class="field"><label>Apogée (année)</label><input id="f_apogee" type="text" placeholder="2030"></div>
+      <div class="field"><label>Cépage</label><input id="f_cepage" type="text" list="cepDatalist" placeholder="Chenin"></div>
+    </div>
+    <div class="field"><label>Note</label><input id="f_note" type="text" placeholder="à carafer…"></div>
+    <datalist id="cepDatalist"></datalist>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="cancelWine">Annuler</button>
+      <button class="btn-primary" id="saveWine">Ajouter</button>
+    </div>
+    <p class="csvhint">Import par fichier : <b>CSV</b> avec colonnes <code>nom, region, sous-region, couleur, cepage, millesime, quantite, prix, apogee, note</code>, ou <b>JSON</b> exporté depuis l'appli. <span class="linklike" id="csvTemplate">Télécharger un modèle CSV</span>.</p>
+  </div>
+</div>
+
+<div class="overlay" id="glossOverlay">
+  <div class="modal gmodal">
+    <h2>Glossaire du vin</h2>
+    <p class="tag">Le vocabulaire essentiel, de la vigne au verre.</p>
+    <div class="gsearch"><input id="glossSearch" type="text" placeholder="Rechercher un terme&hellip;"></div>
+    <div id="glossBody"></div>
+    <div class="modal-actions"><button class="btn-cancel" id="glossClose">Fermer</button></div>
+  </div>
+</div>
+
+<script>
+const PH='<span class="ph">à compléter</span>';
+
+// ---- Dictionnaire de cépages (arômes / accords) ----
+const CEPAGES={
+ "Chardonnay":{aromes:["Agrumes","Pomme","Beurre","Noisette","Fleurs blanches"],accords:["Poissons","Volaille à la crème","Fruits de mer","Comté"]},
+ "Pinot Noir":{aromes:["Cerise","Fraise","Sous-bois","Violette","Épices"],accords:["Volaille","Bœuf","Champignons","Fromages doux"]},
+ "Meunier":{aromes:["Fruits jaunes","Brioche","Fruits rouges"],accords:["Apéritif","Charcuterie","Volaille"]},
+ "Riesling":{aromes:["Citron","Pomme verte","Note pétrolée","Fleurs"],accords:["Poissons","Fruits de mer","Cuisine asiatique","Choucroute"]},
+ "Gewurztraminer":{aromes:["Litchi","Rose","Épices","Fruits exotiques","Miel"],accords:["Cuisine épicée","Munster","Foie gras"]},
+ "Pinot Gris":{aromes:["Poire","Note fumée","Miel","Fruits secs"],accords:["Foie gras","Volaille","Champignons"]},
+ "Muscat":{aromes:["Raisin frais","Fleur d'oranger","Agrumes"],accords:["Apéritif","Asperges","Desserts fruités"]},
+ "Sylvaner":{aromes:["Agrumes","Herbe fraîche","Minéral"],accords:["Fruits de mer","Charcuterie","Tarte flambée"]},
+ "Chenin blanc":{aromes:["Coing","Miel","Pomme","Fleurs","Cire"],accords:["Poissons","Volaille","Chèvre","Desserts (moelleux)"]},
+ "Sauvignon blanc":{aromes:["Agrumes","Buis","Pierre à fusil","Fruit de la passion"],accords:["Chèvre","Fruits de mer","Asperges"]},
+ "Melon de Bourgogne":{aromes:["Agrumes","Iode","Pomme verte","Minéral"],accords:["Huîtres","Fruits de mer","Poissons"]},
+ "Cabernet Franc":{aromes:["Framboise","Poivron","Violette","Graphite"],accords:["Charcuterie","Viandes rouges","Volaille"]},
+ "Gamay":{aromes:["Cerise","Framboise","Banane","Pivoine"],accords:["Charcuterie","Volaille","Plats canailles"]},
+ "Aligoté":{aromes:["Citron","Pomme verte","Fleurs blanches"],accords:["Escargots","Fruits de mer","Apéritif (kir)"]},
+ "Savagnin":{aromes:["Noix","Curry","Pomme","Épices"],accords:["Comté","Volaille aux morilles","Curry"]},
+ "Poulsard":{aromes:["Fruits rouges délicats","Épices","Floral"],accords:["Charcuterie","Volaille","Poissons"]},
+ "Trousseau":{aromes:["Fruits noirs","Épices","Cuir"],accords:["Viandes","Gibier léger","Fromages"]},
+ "Jacquère":{aromes:["Fleurs alpines","Agrumes","Minéral"],accords:["Fondue","Raclette","Poissons de lac"]},
+ "Altesse":{aromes:["Fruits secs","Agrumes","Miel","Minéral"],accords:["Poissons","Volaille","Fromages"]},
+ "Mondeuse":{aromes:["Fruits noirs","Poivre","Violette"],accords:["Charcuterie de montagne","Viandes","Diots"]},
+ "Bergeron":{aromes:["Abricot","Miel","Fleurs","Fruits secs"],accords:["Poissons en sauce","Volaille","Fromages"]},
+ "Syrah":{aromes:["Poivre","Violette","Mûre","Olive noire","Fumé"],accords:["Gibier","Viandes grillées","Daube"]},
+ "Viognier":{aromes:["Abricot","Pêche","Fleurs blanches","Miel"],accords:["Poissons","Volaille","Cuisine douce-épicée"]},
+ "Grenache":{aromes:["Fraise","Framboise confite","Garrigue","Épices"],accords:["Daube","Agneau","Plats mijotés"]},
+ "Mourvèdre":{aromes:["Mûre","Cuir","Garrigue","Poivre"],accords:["Gibier","Daube","Viandes mijotées"]},
+ "Cinsault":{aromes:["Fruits rouges frais","Floral"],accords:["Grillades","Cuisine d'été","Rosés à table"]},
+ "Cabernet Sauvignon":{aromes:["Cassis","Cèdre","Graphite","Menthe","Tabac"],accords:["Agneau","Bœuf","Gibier"]},
+ "Merlot":{aromes:["Prune","Mûre","Chocolat","Truffe"],accords:["Viandes rouges","Magret","Champignons"]},
+ "Sémillon":{aromes:["Miel","Cire","Agrumes confits","Fruits secs"],accords:["Foie gras","Roquefort","Poissons riches"]},
+ "Malbec (Côt)":{aromes:["Mûre","Prune","Réglisse","Violette"],accords:["Viandes rouges","Cassoulet","Magret"]},
+ "Tannat":{aromes:["Fruits noirs","Réglisse","Tanins puissants","Cuir"],accords:["Confit de canard","Garbure","Viandes"]},
+ "Petit & Gros Manseng":{aromes:["Agrumes","Fruits exotiques","Miel (moelleux)"],accords:["Foie gras","Poissons","Apéritif"]},
+ "Négrette":{aromes:["Violette","Fruits rouges","Épices","Réglisse"],accords:["Charcuterie","Grillades","Volaille"]},
+ "Fer Servadou":{aromes:["Cassis","Poivron","Épices"],accords:["Charcuterie","Viandes","Aligot"]},
+ "Carignan":{aromes:["Fruits noirs","Garrigue","Épices","Réglisse"],accords:["Grillades","Daube","Plats relevés"]},
+ "Maccabeu":{aromes:["Fleurs blanches","Agrumes","Fruits secs"],accords:["Apéritif","Poissons","Tapas"]},
+ "Rolle (Vermentino)":{aromes:["Agrumes","Poire","Fenouil","Fleurs"],accords:["Poissons grillés","Fruits de mer","Cuisine méditerranéenne"]},
+ "Niellucciu":{aromes:["Fruits rouges","Maquis","Épices"],accords:["Charcuterie corse","Viandes","Gibier"]},
+ "Sciaccarellu":{aromes:["Poivre","Fruits rouges","Maquis","Floral"],accords:["Charcuterie","Viandes blanches","Fromages"]},
+ "Vermentinu":{aromes:["Agrumes","Amande","Fleurs","Maquis"],accords:["Poissons","Fruits de mer","Fromages de brebis"]},
+ "Marsanne":{aromes:["amande","fleurs blanches","miel","abricot sec"],accords:["volailles à la crème","poissons grillés","fromages doux"]},
+ "Roussanne":{aromes:["aubépine","miel","poire","herbes fraîches"],accords:["homard","viandes blanches","risotto"]},
+ "Pinot Blanc":{aromes:["pomme","fleurs blanches","amande fraîche"],accords:["quiches et tartes salées","poissons","apéritif"]},
+ "Muscadelle":{aromes:["raisin frais","fleurs","notes musquées"],accords:["assemblages liquoreux","desserts aux fruits"]},
+ "Petit Verdot":{aromes:["violette","encre","épices sombres"],accords:["viandes rouges","rôle d'assemblage médocain"]},
+ "Mauzac":{aromes:["pomme verte","poire","foin coupé"],accords:["bulles ancestrales","apéritif","tartes"]},
+ "Duras":{aromes:["poivre","fruits noirs","violette"],accords:["charcuteries","grillades","cassoulet"]},
+ "Tibouren":{aromes:["garrigue","fruits rouges délicats","épices fines"],accords:["rosés de gastronomie","cuisine provençale"]},
+ "Clairette":{aromes:["fenouil","pomme","fleurs blanches"],accords:["poissons méditerranéens","bouillabaisse"]},
+ "Grolleau":{aromes:["fruits rouges croquants","poivre doux"],accords:["rosés de Loire","apéritif","charcuteries"]},
+ "Persan":{aromes:["framboise","épices","violette"],accords:["gibiers","diots de Savoie","fromages affinés"]},
+ "Piquepoul":{aromes:["citron","iode","fleurs blanches"],accords:["huîtres","coquillages","fritures"]},
+ "Grenache blanc":{aromes:["fenouil","pêche blanche","anis"],accords:["poissons riches","fromages de brebis"]},
+ "Grenache gris":{aromes:["pêche","amande","touche saline"],accords:["cuisine catalane","poissons grillés"]}
+};
+
+// ---- Données régions + sous-régions ----
+// poly/subPoly = [lon,lat] (zones lissées). superficie/production/millésimes = squelette.
+const DATA={
+ champagne:{name:"Champagne",color:"#d9b94e",ll:[4.1,48.95],types:["Effervescent blanc","Effervescent rosé","Coteaux (tranquille)"],styleVin:"L'art de l'assemblage et de la bulle fine : des vins de craie tendus, entre agrumes, brioche et salinité — la référence mondiale de l'effervescence.",superficie:"≈ 34 000 ha",production:"≈ 230 M L/an (~300 M bouteilles)",cepages:["Chardonnay","Pinot Noir","Meunier"],domaines:["Krug","Bollinger","Jacques Selosse","Pierre Paillard","Egly-Ouriet"],aoc:["Champagne","Coteaux Champenois","Rosé des Riceys"],
+   poly:[[3.5,49.28],[4.15,49.32],[4.4,48.9],[4.78,48.15],[4.4,47.98],[3.9,48.6],[3.55,49.0]],
+   subs:[{n:"Vallée de la Marne",ll:[3.6,49.06],types:["Effervescent"],cepageStyle:"Dominante Meunier, fruité et souple.",cepages:["Meunier","Pinot Noir"],domaines:["Bollinger","Billecart-Salmon","Philipponnat","Jacquesson","Tarlant","Georges Laval"],aoc:["Champagne"],millBest:["2008","2012","2019"],millWorst:["2001","2011"],poly:[[3.38,49.1],[3.92,49.14],[3.96,48.97],[3.42,48.97]]},
+         {n:"Montagne de Reims",ll:[4.08,49.2],types:["Effervescent"],cepageStyle:"Pinot Noir structurant, grands crus.",cepages:["Pinot Noir","Chardonnay"],domaines:["Krug","Louis Roederer","Egly-Ouriet","Paul Bara","Benoît Lahaye","Eric Rodez"],aoc:["Champagne Grand Cru"],millBest:["2008","2012","2019"],millWorst:["2003","2011"],poly:[[3.9,49.27],[4.22,49.3],[4.26,49.12],[3.94,49.1]]},
+         {n:"Côte des Blancs",ll:[4.02,48.86],types:["Effervescent (Blanc de Blancs)"],cepageStyle:"Chardonnay pur, tendu et minéral.",cepages:["Chardonnay"],domaines:["Salon","Jacques Selosse","Pierre Péters","Agrapart","Larmandier-Bernier","De Sousa"],aoc:["Champagne Grand Cru"],millBest:["2008","2012","2019"],millWorst:["2001","2011"],poly:[[3.94,49.02],[4.1,49.02],[4.1,48.8],[3.94,48.8]]},
+         {n:"Côte des Bar",ll:[4.6,48.1],types:["Effervescent"],cepageStyle:"Pinot Noir solaire, sols kimméridgiens.",cepages:["Pinot Noir"],domaines:["Drappier","Cédric Bouchard","Vouette & Sorbée","Marie-Courtin","Fleury"],aoc:["Champagne","Rosé des Riceys"],millBest:["2015","2018","2019"],millWorst:["2001","2011"],poly:[[4.42,48.28],[4.78,48.22],[4.72,47.96],[4.4,48.0]]}]},
+ alsace:{name:"Alsace",color:"#8a9a5b",ll:[7.3,48.2],types:["Blanc","Effervescent (Crémant)","Rouge (léger)","Liquoreux (VT/SGN)"],styleVin:"Blancs aromatiques d'une pureté cristalline, du riesling ciselé au gewurztraminer opulent, sur une mosaïque géologique unique en France.",superficie:"≈ 15 500 ha",production:"≈ 110 M L/an",cepages:["Riesling","Gewurztraminer","Pinot Gris","Muscat","Pinot Blanc","Sylvaner","Pinot Noir"],domaines:["Trimbach","Zind-Humbrecht","Weinbach","Marcel Deiss"],aoc:["Alsace","Alsace Grand Cru","Crémant d'Alsace"],
+   poly:[[7.18,48.92],[7.43,48.86],[7.4,47.88],[7.18,47.96]],
+   subs:[{n:"Bas-Rhin",ll:[7.32,48.55],types:["Blanc","Crémant"],cepageStyle:"Profil plus tendre, Sylvaner & Riesling.",cepages:["Riesling","Sylvaner","Pinot Blanc"],domaines:["Ostertag","Marc Kreydenweiss","Julien Meyer","Frédéric Mochel"],aoc:["Alsace","Crémant d'Alsace"],millBest:["2015","2017","2019"],millWorst:["2006","2014"],poly:[[7.18,48.92],[7.43,48.86],[7.41,48.32],[7.18,48.36]]},
+         {n:"Haut-Rhin",ll:[7.3,48.05],types:["Blanc","Liquoreux"],cepageStyle:"Grands crus puissants, Riesling & Gewurz.",cepages:["Riesling","Gewurztraminer","Pinot Gris"],domaines:["Zind-Humbrecht","Trimbach","Weinbach","Marcel Deiss","Albert Boxler","Josmeyer"],aoc:["Alsace","Alsace Grand Cru"],millBest:["2015","2017","2019"],millWorst:["2006","2014"],poly:[[7.18,48.32],[7.41,48.28],[7.39,47.88],[7.18,47.96]]}]},
+ loire:{name:"Vallée de la Loire",color:"#6fa3a0",ll:[0.6,47.5],types:["Blanc","Rouge","Rosé","Effervescent","Liquoreux"],styleVin:"Le royaume de la fraîcheur : chenins tendus ou moelleux, sauvignons fumés, cabernets francs croquants — des vins de rivière, vifs et digestes.",superficie:"≈ 57 000 ha",production:"≈ 250 M L/an",cepages:["Chenin blanc","Sauvignon blanc","Melon de Bourgogne","Cabernet Franc","Gamay","Grolleau","Pinot Noir"],cepagesRares:["Pineau d'Aunis","Romorantin","Pinot Noir","Côt (Malbec)"],domaines:["Clos Naudin (Foreau)","Huet","Didier Dagueneau","Clos Rougeard","A. Mellot"],aoc:["Muscadet","Savennières","Vouvray","Chinon","Sancerre","Pouilly-Fumé","Saumur-Champigny","Coteaux du Layon"],
+   poly:[[-1.72,47.36],[-0.9,47.42],[-0.2,47.46],[0.5,47.55],[1.0,47.56],[2.0,47.55],[2.92,47.54],[3.0,47.18],[2.0,47.16],[1.0,47.14],[0.0,47.1],[-0.4,47.08],[-1.0,47.05],[-1.7,47.04]],
+   subs:[{n:"Pays Nantais",ll:[-1.4,47.18],types:["Blanc"],cepageStyle:"Muscadet iodé sur lie.",cepages:["Melon de Bourgogne"],domaines:["Domaine de la Pépière","Jo Landron","Domaine de l'Écu","Luneau-Papin"],aoc:["Muscadet Sèvre-et-Maine"],millBest:["2014","2020","2022"],millWorst:["2012","2021"],poly:[[-1.74,47.36],[-1.0,47.4],[-0.92,47.08],[-1.7,47.04]]},
+         {n:"Anjou-Saumur",ll:[-0.3,47.16],types:["Blanc","Rouge","Liquoreux"],cepageStyle:"Chenin (sec & moelleux), Cabernet Franc.",cepages:["Chenin blanc","Cabernet Franc"],domaines:["Clos Rougeard","Roches Neuves (T. Germain)","Guiberteau","Richard Leroy","Patrick Baudouin","Château Pierre-Bise"],aoc:["Savennières","Saumur-Champigny","Coteaux du Layon"],millBest:["2018","2020","2022"],millWorst:["2012","2021"],poly:[[-0.72,47.46],[0.12,47.46],[0.12,47.12],[-0.72,47.12]]},
+         {n:"Touraine",ll:[0.72,47.28],types:["Blanc","Rouge","Effervescent"],cepageStyle:"Vouvray (Chenin), Chinon (Cab Franc).",cepages:["Chenin blanc","Cabernet Franc","Sauvignon blanc"],cepagesRares:["Pineau d'Aunis","Côt (Malbec)","Grolleau"],domaines:["Huet","Clos Naudin (Foreau)","Taille aux Loups","Charles Joguet","Bernard Baudry","Yannick Amirault"],aoc:["Vouvray","Montlouis","Chinon","Bourgueil"],millBest:["2018","2020","2022"],millWorst:["2013","2021"],poly:[[0.15,47.44],[1.32,47.5],[1.32,47.12],[0.24,47.1]]},
+         {n:"Centre (Sancerre)",ll:[2.85,47.33],types:["Blanc","Rouge"],cepageStyle:"Sauvignon minéral, silex.",cepages:["Sauvignon blanc","Pinot Noir"],domaines:["Didier Dagueneau","Vacheron","Alphonse Mellot","François Cotat","Gérard Boulay","Vincent Pinard"],aoc:["Sancerre","Pouilly-Fumé","Menetou-Salon"],millBest:["2018","2020","2022"],millWorst:["2013","2021"],poly:[[2.6,47.52],[3.0,47.46],[3.0,47.14],[2.6,47.2]]}]},
+ bourgogne:{name:"Bourgogne",color:"#8e2f3e",ll:[4.5,47.35],types:["Rouge","Blanc","Effervescent (Crémant)"],styleVin:"Pinot noir et chardonnay à leur sommet : la quintessence du terroir parcellaire, des vins de dentelle qui transcendent leur climat d'origine.",superficie:"≈ 30 000 ha",production:"≈ 150 M L/an",cepages:["Pinot Noir","Chardonnay","Aligoté"],cepagesRares:["César","Sauvignon blanc","Gamay","Pinot Beurot"],domaines:["Romanée-Conti","Leflaive","Roumier","P.-V. Girardin","Fiona Leroy"],aoc:["Chablis","Côte de Nuits-Villages","Gevrey-Chambertin","Meursault","Puligny-Montrachet","Pommard","Pouilly-Fuissé","Mâcon"],
+   poly:[[3.6,47.9],[4.05,47.84],[4.6,47.5],[4.97,47.28],[4.96,46.6],[4.8,46.24],[4.56,46.34],[4.66,47.12],[4.1,47.62],[3.58,47.78]],
+   subs:[{n:"Chablisien-Auxerrois",ll:[3.79,47.81],types:["Blanc"],cepageStyle:"Chardonnay tendu, kimméridgien.",cepages:["Chardonnay"],cepagesRares:["Sauvignon blanc","César"],domaines:["Raveneau","Vincent Dauvissat","William Fèvre","Billaud-Simon","Pattes Loup"],aoc:["Chablis","Chablis Grand Cru","Irancy","Saint-Bris"],millBest:["2014","2017","2020"],millWorst:["2016","2021"],poly:[[3.62,47.9],[3.96,47.86],[3.96,47.7],[3.62,47.74]]},
+         {n:"Côte de Nuits",ll:[4.93,47.18],types:["Rouge"],cepageStyle:"Pinot Noir de grande garde.",cepages:["Pinot Noir"],domaines:["Romanée-Conti","Leroy","Armand Rousseau","Georges Roumier","J.-F. Mugnier","Dujac"],aoc:["Gevrey-Chambertin","Chambolle-Musigny","Vosne-Romanée","Nuits-Saint-Georges","Côte de Nuits-Villages"],millBest:["2015","2019","2020"],millWorst:["2004","2011"],classement:"Concentre 24 des 33 Grands Crus de Bourgogne, presque tous en rouge : Chambertin, Musigny, Clos de Vougeot, Romanée-Conti…",poly:[[4.92,47.31],[5.02,47.26],[4.93,47.06],[4.82,47.13]]},
+         {n:"Côte de Beaune",ll:[4.78,46.95],types:["Blanc","Rouge"],cepageStyle:"Grands blancs (Chardonnay), Pinot.",cepages:["Chardonnay","Pinot Noir"],domaines:["Coche-Dury","Leflaive","Comtes Lafon","Roulot","Marquis d'Angerville","Ramonet"],aoc:["Corton","Meursault","Puligny-Montrachet","Volnay","Pommard"],millBest:["2014","2017","2020"],millWorst:["2011","2013"],classement:"Le royaume des Grands Crus blancs — Montrachet, Corton-Charlemagne — aux côtés du Corton, unique Grand Cru rouge de la côte.",poly:[[4.78,47.06],[4.94,47.0],[4.86,46.86],[4.72,46.92]]},
+         {n:"Côte Chalonnaise",ll:[4.7,46.72],types:["Rouge","Blanc"],cepageStyle:"Bon rapport qualité-prix.",cepages:["Pinot Noir","Chardonnay","Aligoté"],domaines:["A. & P. de Villaine","Faiveley","François Raquillet","Stéphane Aladame","Michel Juillot"],aoc:["Mercurey","Givry","Rully"],millBest:["2015","2019","2020"],millWorst:["2011","2013"],poly:[[4.58,46.86],[4.84,46.8],[4.78,46.6],[4.56,46.66]]},
+         {n:"Mâconnais",ll:[4.78,46.35],types:["Blanc"],cepageStyle:"Chardonnay généreux et solaire.",cepages:["Chardonnay"],domaines:["Guffens-Heynen","Valette","Bret Brothers","Robert-Denogent","Héritiers du Comte Lafon","Daniel Barraud"],aoc:["Pouilly-Fuissé","Saint-Véran","Mâcon-Villages"],millBest:["2017","2019","2020"],millWorst:["2013","2016"],poly:[[4.58,46.5],[4.92,46.45],[4.85,46.24],[4.56,46.3]]}]},
+ beaujolais:{name:"Beaujolais",color:"#c2403a",ll:[4.68,46.05],types:["Rouge","Rosé","Blanc"],styleVin:"Le gamay dans toute sa gourmandise : des crus granitiques sérieux et profonds aux villages gouleyants — le fruit fait roi.",superficie:"≈ 14 500 ha",production:"≈ 75 M L/an",cepages:["Gamay","Chardonnay"],cepagesRares:["Aligoté","Pinot Noir"],domaines:["Jean Foillard","Marcel Lapierre","J.-P. Thévenet","Saint-Cyr","Yvon Métras"],aoc:["Brouilly","Côte de Brouilly","Régnié","Morgon","Chiroubles","Fleurie","Moulin-à-Vent","Chénas","Juliénas","Saint-Amour","Beaujolais-Villages"],
+   poly:[[4.55,46.28],[4.8,46.25],[4.78,45.86],[4.56,45.9]],
+   subs:[{n:"Crus du Beaujolais",ll:[4.7,46.22],types:["Rouge"],cepageStyle:"Gamay de garde sur granite.",cepages:["Gamay"],domaines:["Jean Foillard","Marcel Lapierre","Yvon Métras","Château Thivin","L.-C. Desvignes","J.-P. Thévenet"],aoc:["Brouilly","Côte de Brouilly","Régnié","Morgon","Chiroubles","Fleurie","Moulin-à-Vent","Chénas","Juliénas","Saint-Amour"],millBest:["2015","2018","2020"],millWorst:["2012","2013"],poly:[[4.58,46.28],[4.8,46.25],[4.76,46.1],[4.58,46.14]]},
+         {n:"Beaujolais-Villages",ll:[4.66,45.96],types:["Rouge","Rosé","Blanc"],cepageStyle:"Gamay gourmand et fruité.",cepages:["Gamay","Chardonnay"],domaines:["Terres Dorées (J.-P. Brun)","Domaine du Vissoux","Jean-Claude Lapalu"],aoc:["Beaujolais-Villages"],millBest:["2015","2018","2020"],millWorst:["2012","2013"],poly:[[4.56,46.12],[4.76,46.1],[4.74,45.86],[4.56,45.9]]}]},
+ jura:{name:"Jura",color:"#c98b3a",ll:[5.55,46.78],types:["Blanc","Rouge","Effervescent","Vin Jaune","Vin de Paille"],styleVin:"Un vignoble à part : vins jaunes sous voile, savagnins oxydatifs, ploussards diaphanes — des saveurs uniques au monde, entre noix, épices et tension.",superficie:"≈ 2 000 ha",production:"≈ 9 M L/an",cepages:["Savagnin","Chardonnay","Poulsard","Trousseau","Pinot Noir"],domaines:["Tissot","Overnoy-Houillon","Ganevat","Domaine Macle"],aoc:["Arbois","Château-Chalon","L'Étoile","Côtes du Jura","Crémant du Jura","Macvin du Jura"],
+   poly:[[5.42,46.96],[5.82,46.92],[5.76,46.42],[5.4,46.48]],
+   subs:[{n:"Arbois",ll:[5.72,46.92],types:["Rouge","Blanc","Vin Jaune"],cepageStyle:"Poulsard/Trousseau, Savagnin.",cepages:["Poulsard","Trousseau","Savagnin","Chardonnay"],domaines:["Overnoy-Houillon","Stéphane Tissot","La Tournelle","Jacques Puffeney","Michel Gahier"],aoc:["Arbois"],millBest:["2015","2018","2020"],millWorst:["2016","2021"],poly:[[5.58,46.97],[5.86,46.92],[5.82,46.8],[5.56,46.84]]},
+         {n:"Château-Chalon",ll:[5.68,46.74],types:["Vin Jaune"],cepageStyle:"Savagnin oxydatif, sous voile.",cepages:["Savagnin"],domaines:["Jean Macle","Berthet-Bondet","Jean-Claude Crédoz"],aoc:["Château-Chalon"],millBest:["2009","2015","2018"],millWorst:["2016","2021"],poly:[[5.5,46.8],[5.74,46.78],[5.7,46.66],[5.48,46.68]]},
+         {n:"Côtes du Jura",ll:[5.52,46.56],types:["Blanc","Rouge","Vin Jaune","Effervescent"],cepageStyle:"Polyvalent, Chardonnay & Savagnin.",cepages:["Chardonnay","Savagnin","Poulsard"],domaines:["Jean-François Ganevat","Domaine Labet","Les Dolomies","Domaine Pignier"],aoc:["Côtes du Jura"],millBest:["2015","2018","2020"],millWorst:["2016","2021"],poly:[[5.4,46.66],[5.66,46.64],[5.62,46.42],[5.38,46.48]]}]},
+ savoie:{name:"Savoie",color:"#5f8a9c",ll:[5.85,45.62],types:["Blanc","Rouge","Effervescent"],styleVin:"Vins de montagne frais et ciselés : jacquère cristalline, altesse florale, mondeuse poivrée — la pureté des Alpes en bouteille.",superficie:"≈ 2 200 ha",production:"≈ 12 M L/an",cepages:["Jacquère","Altesse","Mondeuse","Bergeron","Persan"],domaines:["Belluard","Prieuré Saint-Christophe","Giachino"],aoc:["Vin de Savoie","Roussette de Savoie","Roussette du Bugey","Seyssel","Bugey","Bugey-Cerdon"],
+   poly:[[5.42,45.94],[6.08,45.72],[6.14,45.38],[5.7,45.32],[5.48,45.6]],
+   subs:[{n:"Bugey",ll:[5.5,45.86],types:["Effervescent","Rosé","Blanc"],cepageStyle:"Bulles (Cerdon), blancs vifs.",cepages:["Gamay","Poulsard","Jacquère","Altesse","Mondeuse"],domaines:["Renardat-Fâche","Franck Peillot","Yves Duport"],aoc:["Bugey","Roussette du Bugey","Bugey-Cerdon"],millBest:["2018","2020"],millWorst:["2013","2021"],poly:[[5.4,45.96],[5.68,45.92],[5.64,45.72],[5.4,45.78]]},
+         {n:"Combe de Savoie",ll:[6.0,45.56],types:["Blanc","Rouge"],cepageStyle:"Jacquère, Mondeuse, Bergeron.",cepages:["Jacquère","Altesse","Mondeuse","Bergeron","Persan"],domaines:["Louis Magnin","Gilles Berlioz","A. & M. Quenard","Domaine des Ardoisières"],aoc:["Vin de Savoie (Apremont, Chignin)","Roussette de Savoie"],millBest:["2018","2020","2022"],millWorst:["2013","2021"],poly:[[5.86,45.66],[6.16,45.58],[6.1,45.4],[5.86,45.46]]}]},
+ rhone:{name:"Vallée du Rhône",color:"#7a3b6e",ll:[4.78,44.7],types:["Rouge","Blanc","Rosé","VDN"],styleVin:"Du nord granitique au sud solaire : syrahs fumées et profondes, grenaches généreux, blancs de viognier et de roussanne — puissance et soleil.",superficie:"≈ 66 000 ha",production:"≈ 250 M L/an",cepages:["Syrah","Grenache noir","Mourvèdre","Cinsault","Carignan","Viognier","Marsanne","Roussanne","Grenache blanc","Clairette","Bourboulenc"],cepagesRares:["Vaccarèse","Counoise","Muscardin","Picardin","Piquepoul","Terret noir","Roussanne (rare ici)","Picpoul noir"],domaines:["Guigal","J.-L. Chave","Clape","Château Rayas","Beaucastel"],aoc:["Côte-Rôtie","Condrieu","Hermitage","Saint-Joseph","Cornas","Château-Grillet","Châteauneuf-du-Pape","Gigondas","Vacqueyras","Vinsobres","Cairanne","Rasteau","Lirac","Tavel","Grignan-les-Adhémar","Ventoux","Luberon","Côtes du Vivarais","Côtes du Rhône","Côtes du Rhône Villages"],
+   poly:[[4.7,45.56],[4.96,45.48],[4.95,45.05],[5.05,44.6],[5.28,44.28],[5.05,43.95],[4.6,43.96],[4.5,44.3],[4.54,44.62],[4.62,45.1],[4.68,45.35]],
+   subs:[{n:"Rhône septentrional",ll:[4.85,45.3],types:["Rouge","Blanc"],cepageStyle:"Syrah pure, Viognier (Condrieu).",cepages:["Syrah","Viognier","Marsanne","Roussanne"],domaines:["J.-L. Chave","Guigal","Domaine Jamet","Auguste Clape","Thierry Allemand","Georges Vernay"],aoc:["Côte-Rôtie","Condrieu","Hermitage","Saint-Joseph","Crozes-Hermitage","Cornas"],millBest:["2010","2015","2019"],millWorst:["2002","2014"],poly:[[4.7,45.56],[4.95,45.48],[4.96,45.0],[4.76,45.0],[4.68,45.26]]},
+         {n:"Rhône méridional",ll:[4.82,44.15],types:["Rouge","Blanc","Rosé","VDN"],cepageStyle:"Assemblage GSM généreux.",cepages:["Grenache","Syrah","Mourvèdre"],cepagesRares:["Counoise","Vaccarèse","Muscardin","Picardin","Terret noir","Piquepoul"],domaines:["Château Rayas","Beaucastel","Vieux Télégraphe","Clos des Papes","Château de Saint-Cosme","Gramenon"],aoc:["Châteauneuf-du-Pape","Gigondas","Vacqueyras","Tavel","Rasteau","Beaumes-de-Venise"],millBest:["2010","2016","2019"],millWorst:["2002","2008"],poly:[[4.54,44.48],[5.22,44.34],[5.0,43.94],[4.54,43.98]]}]},
+ bordeaux:{name:"Bordeaux",color:"#5a2330",ll:[-0.5,45.05],types:["Rouge","Blanc sec","Liquoreux","Clairet/Rosé"],styleVin:"L'art de l'assemblage atlantique : cabernets structurés en rive gauche, merlots veloutés en rive droite, liquoreux d'or à Sauternes.",superficie:"≈ 105 000 ha",production:"≈ 450 M L/an",cepages:["Cabernet Sauvignon","Merlot","Cabernet Franc","Petit Verdot","Sémillon","Sauvignon blanc","Muscadelle"],domaines:["Haut-Brion","Lafite Rothschild","Mouton Rothschild","Latour","Margaux","Yquem","Pétrus","Cheval Blanc","Ausone","Angélus","Pavie"],aoc:["Médoc","Pauillac","Margaux","Saint-Julien","Saint-Émilion","Pomerol","Pessac-Léognan","Graves","Sauternes"],
+   poly:[[-1.1,45.45],[-0.78,45.5],[-0.55,45.2],[-0.45,45.05],[-0.15,45.05],[0.05,44.85],[0.0,44.55],[-0.2,44.42],[-0.6,44.4],[-0.95,44.6],[-1.06,44.85]],
+   subs:[{n:"Blaye & Côtes de Bourg",ll:[-0.47,45.23],types:["Rouge","Blanc sec"],cepageStyle:"Merlot dominant, vins de côtes accessibles et gourmands.",cepages:["Merlot","Cabernet Sauvignon","Cabernet Franc"],domaines:["Roc de Cambes","Château Bujan","Clos du Notaire"],aoc:["Blaye Côtes de Bordeaux","Côtes de Bourg"],millBest:["2015","2016","2019"],millWorst:["2013","2017"],poly:[[-0.6,45.09],[-0.64,45.25],[-0.5,45.41],[-0.32,45.35],[-0.34,45.1],[-0.5,45.03]]},{n:"Médoc",ll:[-0.88,45.22],types:["Rouge"],cepageStyle:"Cabernet Sauvignon dominant, graves.",cepages:["Cabernet Sauvignon","Merlot","Cabernet Franc","Petit Verdot"],domaines:["Latour","Lafite Rothschild","Mouton Rothschild","Margaux","Léoville Las Cases","Pontet-Canet"],aoc:["Saint-Estèphe","Pauillac","Saint-Julien","Margaux","Haut-Médoc"],millBest:["2005","2010","2016","2019"],millWorst:["2007","2013"],classement:"Cœur du classement de 1855 : 60 châteaux hiérarchisés en cinq rangs, des Premiers Crus (Latour, Lafite, Mouton, Margaux) aux Cinquièmes — complété par les Crus Bourgeois, régulièrement revus.",poly:[[-1.06,45.56],[-0.82,45.34],[-0.64,45.08],[-0.6,44.95],[-0.84,44.92],[-1.06,45.06],[-1.12,45.36]]},
+         {n:"Libournais",ll:[-0.06,45.04],types:["Rouge"],cepageStyle:"Merlot dominant, rive droite.",cepages:["Merlot","Cabernet Franc"],domaines:["Pétrus","Cheval Blanc","Ausone","Figeac","Vieux Château Certan","Canon"],aoc:["Saint-Émilion Grand Cru","Pomerol","Lalande-de-Pomerol","Fronsac"],millBest:["2009","2015","2019"],millWorst:["2007","2013"],classement:"Saint-Émilion révise son classement environ tous les dix ans (Premiers Grands Crus Classés A et B) ; l'édition 2022 a vu plusieurs grands noms s'en retirer. Pomerol, à côté, n'a aucun classement.",poly:[[-0.26,45.08],[0.0,45.1],[0.16,45.02],[0.06,44.95],[-0.18,44.96],[-0.28,45.01]]},
+         {n:"Graves & Pessac-Léognan",ll:[-0.56,44.67],types:["Rouge","Blanc sec"],cepageStyle:"Graves : rouges fins & blancs racés.",cepages:["Cabernet Sauvignon","Merlot","Sauvignon blanc","Sémillon"],domaines:["Haut-Brion","La Mission Haut-Brion","Smith Haut Lafitte","Pape Clément","Domaine de Chevalier","Haut-Bailly"],aoc:["Pessac-Léognan","Graves"],millBest:["2009","2010","2016"],millWorst:["2007","2013"],classement:"Berceau des Crus Classés de Graves (1953, complété en 1959) : 16 châteaux classés en rouge et/ou en blanc — dont Haut-Brion, seul présent aussi dans le 1855.",poly:[[-0.64,44.82],[-0.5,44.74],[-0.42,44.62],[-0.48,44.52],[-0.64,44.56],[-0.7,44.72]]},
+         {n:"Entre-deux-Mers",ll:[-0.08,44.72],types:["Blanc sec","Rouge"],cepageStyle:"Blancs secs frais.",cepages:["Sauvignon blanc","Sémillon","Muscadelle"],domaines:["Château Turcaud","Château Bonnet","Château Thieuley","Château Sainte-Marie"],aoc:["Entre-deux-Mers","Cadillac Côtes de Bordeaux"],millBest:["2019","2020","2022"],millWorst:["2013","2017"],poly:[[-0.46,44.83],[-0.24,44.87],[0.06,44.85],[0.26,44.8],[0.2,44.6],[-0.06,44.56],[-0.3,44.62],[-0.44,44.74]]},
+         {n:"Sauternes",ll:[-0.32,44.5],types:["Liquoreux"],cepageStyle:"Botrytis : Sémillon liquoreux.",cepages:["Sémillon","Sauvignon blanc","Muscadelle"],domaines:["Yquem","Climens","Suduiraut","Coutet","Rieussec"],aoc:["Sauternes","Barsac","Cérons"],millBest:["2001","2009","2011"],millWorst:["2012","2018"],classement:"L'autre volet du classement de 1855 : 27 crus, dont un unique Premier Cru Supérieur — Yquem.",poly:[[-0.42,44.56],[-0.24,44.54],[-0.22,44.43],[-0.4,44.45]]}]},
+ sudouest:{name:"Sud-Ouest",color:"#9a5a2b",ll:[0.7,43.7],types:["Rouge","Blanc sec","Liquoreux"],styleVin:"Une mosaïque de caractères : malbecs denses de Cahors, tannats puissants de Madiran, mansengs éclatants de Jurançon — l'authenticité des terroirs.",superficie:"≈ 50 000 ha",production:"≈ 300 M L/an",cepages:["Malbec (Côt)","Tannat","Petit & Gros Manseng","Fer Servadou","Duras","Mauzac","Négrette"],domaines:["Plageoles","Cosse-Maisonneuve","Cauhapé","Alain Brumont"],aoc:["Cahors","Madiran","Jurançon","Gaillac","Bergerac","Monbazillac","Fronton","Irouléguy"],
+   poly:[[-0.6,43.02],[0.6,43.2],[0.62,45.02],[1.62,44.6],[2.08,43.98],[1.42,43.4],[0.32,42.98],[-0.62,43.05]],
+   subs:[{n:"Piémont Pyrénéen",ll:[-0.9,43.2],types:["Rouge","Blanc sec","Rosé"],cepageStyle:"Au pied des Pyrénées, des cépages basques et béarnais rares : rouges nerveux et blancs vifs.",cepages:["Tannat","Cabernet Franc","Petit Manseng","Gros Manseng","Petit Courbu"],cepagesRares:["Arrufiac","Camaralet","Lauzet"],domaines:["Domaine Arretxea","Domaine Ilarria","Producteurs Plaimont","Brana"],aoc:["Irouléguy","Saint-Mont","Tursan","Béarn","Pacherenc-du-Vic-Bilh"],millBest:["2015","2018","2020"],millWorst:["2013","2017"],poly:[[-1.4,43.32],[-0.7,43.34],[-0.5,43.12],[-1.2,43.04]]},{n:"Bergerac",ll:[0.5,44.78],types:["Rouge","Blanc","Liquoreux"],cepageStyle:"Profil bordelais.",cepages:["Merlot","Sémillon","Sauvignon blanc","Muscadelle"],domaines:["Tour des Gendres","Tirecul La Gravière","L'Ancienne Cure"],aoc:["Bergerac","Pécharmant","Monbazillac"],millBest:["2016","2019","2020"],millWorst:["2013","2017"],poly:[[0.2,45.0],[0.78,44.95],[0.78,44.58],[0.2,44.64]]},
+         {n:"Cahors",ll:[1.42,44.4],types:["Rouge"],cepageStyle:"Malbec puissant (« black wine »).",cepages:["Malbec (Côt)","Merlot","Tannat"],domaines:["Clos Triguedina","Château du Cèdre","Cosse-Maisonneuve","Clos de Gamot","Lagrézette"],aoc:["Cahors"],millBest:["2015","2019","2022"],millWorst:["2013","2017"],poly:[[1.18,44.55],[1.72,44.5],[1.66,44.28],[1.18,44.34]]},
+         {n:"Gaillac",ll:[1.89,43.88],types:["Rouge","Blanc","Effervescent"],cepageStyle:"Cépages rares (Mauzac, Braucol).",cepages:["Duras","Fer Servadou","Mauzac","Len de l'el"],domaines:["Plageoles","Causse Marines","Domaine Rotier"],aoc:["Gaillac"],millBest:["2015","2019","2020"],millWorst:["2013","2018"],poly:[[1.68,44.0],[2.08,43.95],[2.02,43.72],[1.68,43.8]]},
+         {n:"Madiran",ll:[-0.06,43.54],types:["Rouge","Liquoreux (Pacherenc)"],cepageStyle:"Tannat tannique de garde.",cepages:["Tannat","Cabernet Franc"],domaines:["Château Montus","Bouscassé","Château d'Aydie","Berthoumieu","Chapelle Lenclos"],aoc:["Madiran","Pacherenc-du-Vic-Bilh"],millBest:["2015","2018","2020"],millWorst:["2013","2017"],poly:[[-0.22,43.66],[0.12,43.6],[0.06,43.38],[-0.22,43.44]]},
+         {n:"Jurançon",ll:[-0.42,43.26],types:["Blanc sec","Liquoreux"],cepageStyle:"Manseng, sec ou moelleux.",cepages:["Petit & Gros Manseng"],domaines:["Cauhapé","Camin Larredya","Clos Uroulat","Clos Lapeyre","Bru-Baché"],aoc:["Jurançon"],millBest:["2015","2017","2020"],millWorst:["2013","2018"],poly:[[-0.56,43.36],[-0.24,43.32],[-0.3,43.12],[-0.56,43.16]]}]},
+ languedoc:{name:"Languedoc-Roussillon",color:"#a85a3c",ll:[3.0,43.25],types:["Rouge","Rosé","Blanc","Effervescent","VDN"],styleVin:"Le grand renouveau du Midi : garrigue, schistes et galets pour des rouges épicés et solaires, des blancs de plus en plus ciselés.",superficie:"≈ 230 000 ha",production:"≈ 1,2 Md L/an",cepages:["Grenache","Syrah","Carignan","Mourvèdre","Cinsault","Piquepoul","Grenache blanc","Muscat","Maccabeu"],domaines:["Mas de Daumas Gassac","Grange des Pères","Gérard Bertrand","Mas Jullien","Domaine de l'Hortus"],aoc:["Corbières","Minervois","Saint-Chinian","Faugères","Pic Saint-Loup","Terrasses du Larzac","Fitou","Picpoul de Pinet","Limoux","Banyuls","Collioure","Maury"],
+   poly:[[4.35,43.66],[3.9,43.46],[3.3,43.02],[2.7,42.55],[3.2,42.5],[3.32,42.98],[2.1,43.1],[2.62,43.42],[3.42,43.76]],
+   subs:[{n:"Minervois",ll:[2.68,43.36],types:["Rouge","Rosé"],cepageStyle:"GSM + Carignan.",cepages:["Syrah","Grenache","Carignan","Mourvèdre"],domaines:["Borie de Maurel","Château d'Oupia","Château Maris","Anne Gros & J.-P. Tollot","Clos Centeilles"],aoc:["Minervois","Minervois-La Livinière","Muscat de Saint-Jean-de-Minervois"],millBest:["2015","2017","2019"],millWorst:["2002","2014"],poly:[[2.48,43.42],[2.9,43.4],[2.86,43.18],[2.48,43.24]]},
+         {n:"Corbières",ll:[2.74,42.98],types:["Rouge","Rosé"],cepageStyle:"Garrigue, Carignan & Grenache.",cepages:["Carignan","Grenache","Syrah","Mourvèdre"],domaines:["Maxime Magnon","La Voulte-Gasparets","Domaine de Fontsainte","Castelmaure"],aoc:["Corbières","Corbières-Boutenac"],millBest:["2015","2017","2019"],millWorst:["2002","2014"],poly:[[2.5,43.2],[3.0,43.14],[2.94,42.88],[2.5,42.94]]},
+         {n:"Pic Saint-Loup",ll:[3.85,43.78],types:["Rouge","Rosé"],cepageStyle:"Syrah fraîche, altitude.",cepages:["Syrah","Grenache","Mourvèdre"],domaines:["Domaine de l'Hortus","Mas Bruguière","Clos Marie","Château de Cazeneuve","Ermitage du Pic"],aoc:["Pic Saint-Loup","Languedoc"],millBest:["2015","2017","2019"],millWorst:["2002","2014"],poly:[[3.7,43.9],[4.06,43.82],[4.0,43.64],[3.7,43.7]]},
+         {n:"Limoux",ll:[2.2,43.03],types:["Effervescent","Blanc"],cepageStyle:"Bulles (Blanquette), Chardonnay.",cepages:["Mauzac","Chardonnay","Chenin blanc"],domaines:["Maison Antech","Mouscaillo","Rives-Blanques","Domaine Begude"],aoc:["Blanquette de Limoux","Crémant de Limoux","Limoux"],millBest:["2017","2019","2020"],millWorst:["2014","2018"],poly:[[2.04,43.14],[2.36,43.1],[2.3,42.92],[2.04,42.98]]},
+         {n:"Roussillon (Banyuls)",ll:[3.0,42.52],types:["VDN","Rouge"],cepageStyle:"Grenache, vins doux naturels.",cepages:["Grenache","Grenache blanc","Grenache gris","Maccabeu"],domaines:["La Rectorie","Mas Blanc (Parcé)","La Tour Vieille","Coume del Mas","Gauby"],aoc:["Banyuls","Collioure","Maury","Rivesaltes","Côtes du Roussillon"],millBest:["2015","2017","2019"],millWorst:["2002","2014"],poly:[[2.6,42.68],[3.16,42.6],[3.14,42.42],[2.62,42.5]]}]},
+ provence:{name:"Provence",color:"#cf7f86",ll:[5.9,43.5],types:["Rosé","Rouge","Blanc"],styleVin:"Bien plus que le rosé : des vins de soleil et de garrigue, du rosé gastronomique aux rouges profonds de Bandol portés par le mourvèdre.",superficie:"≈ 28 000 ha",production:"≈ 130 M L/an",cepages:["Grenache","Cinsault","Syrah","Mourvèdre","Tibouren","Carignan","Rolle (Vermentino)","Clairette"],domaines:["Tempier","Château de Pibarnon","Clos Ste-Magdeleine","Trévallon"],aoc:["Côtes de Provence","Coteaux d'Aix-en-Provence","Coteaux Varois","Bandol","Cassis","Palette","Bellet","Les Baux-de-Provence"],
+   poly:[[5.2,43.66],[6.42,43.56],[6.52,43.18],[5.68,43.04],[5.2,43.4]],
+   subs:[{n:"Coteaux d'Aix",ll:[5.34,43.6],types:["Rosé","Rouge"],cepageStyle:"Assemblages provençaux frais.",cepages:["Grenache","Cinsault","Syrah","Cabernet Sauvignon"],domaines:["Trévallon","Château Vignelaure","Château Revelette","Château Calissanne"],aoc:["Coteaux d'Aix-en-Provence","Les Baux-de-Provence"],millBest:["2019","2020"],millWorst:["2002","2014"],poly:[[5.2,43.66],[5.56,43.6],[5.5,43.4],[5.2,43.46]]},
+         {n:"Côtes de Provence",ll:[6.2,43.5],types:["Rosé","Rouge","Blanc"],cepageStyle:"Rosés pâles et fins.",cepages:["Grenache","Cinsault","Syrah","Tibouren","Rolle (Vermentino)"],domaines:["Domaines Ott","Clos Cibonne","Rimauresq","Gavoty","Château Léoube"],aoc:["Côtes de Provence","Sainte-Victoire","La Londe"],millBest:["2019","2020","2022"],millWorst:["2002","2014"],classement:"18 domaines Crus Classés depuis 1955 — dont Clos Cibonne et Rimauresq — un classement figé, jamais rouvert.",poly:[[5.8,43.58],[6.46,43.52],[6.46,43.24],[5.8,43.3]]},
+         {n:"Bandol",ll:[5.76,43.18],types:["Rouge","Rosé","Blanc"],cepageStyle:"Mourvèdre de garde.",cepages:["Mourvèdre","Grenache","Cinsault","Clairette"],domaines:["Tempier","Pibarnon","Pradeaux","Terrebrune","Gros'Noré"],aoc:["Bandol"],millBest:["2015","2016","2019"],millWorst:["2002","2014"],poly:[[5.66,43.25],[5.88,43.21],[5.86,43.12],[5.66,43.15]]},
+         {n:"Cassis",ll:[5.53,43.24],types:["Blanc","Rosé"],cepageStyle:"Blancs marins (Marsanne, Clairette).",cepages:["Marsanne","Clairette","Rolle (Vermentino)"],domaines:["Clos Sainte-Magdeleine","Domaine du Bagnol","Fontcreuse","Domaine du Paternel"],aoc:["Cassis"],millBest:["2019","2020"],millWorst:["2013","2018"],poly:[[5.46,43.3],[5.61,43.27],[5.59,43.19],[5.46,43.22]]}]},
+ corse:{name:"Corse",color:"#4f7a5a",ll:[9.0,42.1],types:["Rouge","Rosé","Blanc","Muscat (VDN)"],styleVin:"L'île aux cépages singuliers : niellucciu structuré, sciaccarellu poivré, vermentinu salin — la Méditerranée à l'état pur.",superficie:"≈ 6 000 ha",production:"≈ 35 M L/an",cepages:["Niellucciu","Sciaccarellu","Vermentinu","Grenache","Muscat petit grain"],domaines:["Antoine Arena","Comte Abbatucci","Yves Leccia","Clos Canarelli"],aoc:["Patrimonio","Ajaccio","Vin de Corse","Muscat du Cap Corse"],
+   poly:[[9.35,42.84],[9.48,42.5],[9.5,41.78],[9.18,41.38],[8.66,41.5],[8.58,42.0],[8.72,42.62],[9.02,42.78]],
+   subs:[{n:"Cap Corse",ll:[9.4,42.92],types:["Muscat (VDN)","Blanc","Rouge"],cepageStyle:"Le doigt nord de l'île : muscats solaires et coteaux escarpés battus par les vents.",cepages:["Muscat petit grain","Vermentinu","Niellucciu"],domaines:["Clos Nicrosi","Domaine Pieretti","Yves Leccia"],aoc:["Muscat du Cap Corse","Coteaux du Cap Corse"],millBest:["2015","2018","2020"],millWorst:["2002","2013"],poly:[[9.32,43.0],[9.46,42.96],[9.4,42.7],[9.28,42.74]]},{n:"Patrimonio",ll:[9.34,42.74],types:["Rouge","Blanc","Muscat (VDN)"],cepageStyle:"Nielluccio & Vermentinu, calcaire.",cepages:["Niellucciu","Vermentinu","Grenache"],domaines:["Antoine Arena","Yves Leccia","Domaine Gentile","Muriel Giudicelli"],aoc:["Patrimonio","Muscat du Cap Corse"],millBest:["2015","2018","2020"],millWorst:["2002","2013"],poly:[[9.28,42.82],[9.44,42.74],[9.42,42.58],[9.24,42.62]]},
+         {n:"Calvi",ll:[8.74,42.58],types:["Rouge","Rosé","Blanc"],cepageStyle:"Vins de Balagne.",cepages:["Niellucciu","Sciaccarellu","Vermentinu"],domaines:["Clos Culombu","Maestracci","Clos Landry","Domaine Alzipratu"],aoc:["Vin de Corse Calvi"],millBest:["2015","2018","2020"],millWorst:["2002","2013"],poly:[[8.62,42.66],[8.86,42.6],[8.82,42.46],[8.6,42.52]]},
+         {n:"Ajaccio",ll:[8.72,41.94],types:["Rouge","Rosé","Blanc"],cepageStyle:"Sciaccarello typique.",cepages:["Sciaccarellu","Vermentinu"],domaines:["Comte Abbatucci","Vaccelli","Clos d'Alzeto"],aoc:["Ajaccio"],millBest:["2015","2018","2020"],millWorst:["2002","2013"],poly:[[8.58,42.06],[8.86,42.0],[8.82,41.8],[8.56,41.88]]},
+         {n:"Sud (Sartène · Figari · Porto-Vecchio)",ll:[9.05,41.62],types:["Rouge","Rosé","Blanc"],cepageStyle:"Extrême sud, vieux cépages.",cepages:["Niellucciu","Sciaccarellu","Vermentinu"],domaines:["Clos Canarelli","Domaine de Tanella"],aoc:["Vin de Corse Sartène","Vin de Corse Figari","Vin de Corse Porto-Vecchio"],millBest:["2015","2018","2020"],millWorst:["2002","2013"],poly:[[8.86,41.74],[9.18,41.7],[9.28,41.46],[8.96,41.42]]}]},
+};
+
+// ---- Histoire & couleurs (pour filtres) par région ----
+const EXTRA={
+ champagne:{classement:"L'échelle des crus classe ici les villages, pas les domaines : 17 sont Grands Crus et 42 Premiers Crus — mentions que peuvent revendiquer les champagnes issus exclusivement de ces terroirs.",colors:["Effervescent","Blanc","Rosé"],histoire:"Vignoble christianisé autour du sacre des rois de France à Reims. Au XVIIᵉ siècle, le moine Dom Pérignon perfectionne l'assemblage et la maîtrise de la prise de mousse, posant les bases du champagne moderne, devenu symbole universel de fête."},
+ alsace:{classement:"51 lieux-dits d'exception forment l'AOC Alsace Grand Cru (Rangen, Schlossberg, Brand…), réservée pour l'essentiel aux cépages nobles : riesling, gewurztraminer, pinot gris et muscat.",colors:["Blanc","Effervescent","Rouge","Liquoreux"],histoire:"Vignoble dès l'époque romaine, l'Alsace a oscillé au fil de l'Histoire entre influences françaises et germaniques — ce qui se lit dans ses cépages et dans son étiquetage par cépage, unique en France."},
+ loire:{colors:["Blanc","Rouge","Rosé","Effervescent","Liquoreux"],histoire:"Vignoble façonné par les moines puis par la cour des rois installée dans la vallée à la Renaissance. Longtemps grande voie commerciale, la Loire diffusait ses vins jusqu'aux Pays-Bas."},
+ bourgogne:{classement:"Ici, on classe la terre et non les domaines : la pyramide des climats — Grand Cru (33 climats), Premier Cru, appellation Village puis Régionale — est inscrite dans les AOC elles-mêmes. Un même vigneron peut produire les quatre niveaux.",colors:["Rouge","Blanc","Effervescent"],histoire:"Le morcellement en « climats » doit beaucoup aux moines clunisiens et cisterciens du Moyen Âge. Les climats du vignoble sont inscrits au patrimoine mondial de l'UNESCO depuis 2015."},
+ beaujolais:{colors:["Rouge","Rosé","Blanc"],histoire:"Terre de Gamay depuis que ce cépage fut écarté de Bourgogne au XIVᵉ siècle. La région doit sa notoriété mondiale au phénomène commercial du Beaujolais nouveau."},
+ jura:{colors:["Blanc","Rouge","Effervescent","Liquoreux"],histoire:"Petit vignoble de tradition ancienne, patrie de Louis Pasteur qui y étudia les fermentations. Célèbre pour son vin jaune élevé « sous voile »."},
+ savoie:{colors:["Blanc","Rouge","Effervescent"],histoire:"Vignoble de montagne aux cépages autochtones rares, longtemps tourné vers la consommation locale et l'essor du tourisme alpin."},
+ rhone:{classement:"Une pyramide à trois étages : l'AOC régionale Côtes du Rhône à la base ; les Côtes du Rhône Villages au-dessus (avec ou sans nom de commune) ; et au sommet les crus, appellations à part entière — Côte-Rôtie, Hermitage, Châteauneuf-du-Pape, Gigondas…",colors:["Rouge","Blanc","Rosé","Liquoreux"],histoire:"Parmi les plus anciens vignobles de France, dès les Romains à Vienne. Châteauneuf-du-Pape tient son nom de la papauté d'Avignon (XIVᵉ s.) et fut pionnier des AOC dans les années 1930."},
+ bordeaux:{classement:"Terre des classements de châteaux : le mythique 1855 (Médoc et Sauternes, des Premiers aux Cinquièmes Crus), les Crus Classés de Graves (1953), le classement de Saint-Émilion révisé environ tous les dix ans, et les Crus Bourgeois. Pomerol, lui, n'a jamais été classé — Pétrus n'a officiellement aucun rang.",colors:["Rouge","Blanc","Liquoreux","Rosé"],histoire:"Essor lié au commerce avec l'Angleterre dès le mariage d'Aliénor d'Aquitaine au XIIᵉ siècle (le « claret »). Le classement de 1855 a fixé une hiérarchie encore célèbre aujourd'hui."},
+ sudouest:{colors:["Rouge","Blanc","Liquoreux"],histoire:"Mosaïque de vignobles longtemps dans l'ombre de Bordeaux, qui contrôlait le port et les exportations. Renaissance moderne autour de cépages autochtones."},
+ languedoc:{classement:"Hiérarchie en construction : sous l'AOC régionale Languedoc émergent des « crus » et terroirs distingués — La Clape, Pic Saint-Loup, Terrasses du Larzac, Minervois-La Livinière, Corbières-Boutenac — qui aspirent à un statut proche des premiers crus, sans système figé.",colors:["Rouge","Rosé","Blanc","Effervescent","Liquoreux"],histoire:"Plus ancien et plus vaste vignoble de France, fondé par les Grecs et les Romains autour de Narbonne. Longtemps voué au vin de masse, il connaît depuis trente ans un fort renouveau qualitatif."},
+ provence:{classement:"Héritage méconnu : 18 domaines des Côtes de Provence portent la mention Cru Classé, issue d'un classement de 1955 jamais révisé et aujourd'hui fermé.",colors:["Rosé","Rouge","Blanc"],histoire:"Berceau de la viticulture française, introduite par les Grecs à Marseille vers 600 av. J.-C. Aujourd'hui référence mondiale du rosé."},
+ corse:{colors:["Rouge","Rosé","Blanc","Liquoreux"],histoire:"Vignoble d'origine grecque puis génoise, aux cépages méditerranéens uniques. Renouveau qualitatif marqué depuis les années 1980."}
+};
+
+// ---- Couches géographiques (coordonnées réelles [lon,lat]) ----
+const RELIEF=[
+ {n:"Alpes",poly:[[5.9,46.3],[6.8,46.1],[7.4,45.4],[7.2,44.4],[6.5,44.0],[6.0,44.5],[6.0,45.4]]},
+ {n:"Pyrénées",poly:[[-1.5,43.2],[-0.3,42.9],[1.0,42.7],[2.2,42.55],[2.9,42.45],[2.0,42.35],[0.5,42.55],[-1.4,43.0]]},
+ {n:"Massif Central",poly:[[2.2,46.1],[3.6,45.9],[4.3,45.1],[3.8,44.2],[2.8,44.3],[2.0,45.1]]},
+ {n:"Vosges",poly:[[6.8,48.6],[7.15,48.35],[7.05,47.85],[6.7,48.05]]},
+ {n:"Jura (massif)",poly:[[5.9,47.3],[6.6,46.9],[6.2,46.3],[5.7,46.7]]}
+];
+const RIVERS=[
+ {n:"Gironde",label:[-0.95,45.44],pts:[[-0.61,45.03],[-0.72,45.2],[-0.86,45.34],[-0.96,45.45],[-1.06,45.57]]},
+ {n:"Loire",label:[1.4,47.72],pts:[[-2.1,47.28],[-1.5,47.2],[-0.85,47.26],[0.1,47.27],[0.7,47.39],[1.4,47.6],[2.0,47.78],[2.6,47.66],[2.95,47.42],[3.1,46.9],[3.4,46.4],[4.0,45.8],[4.05,45.2]]},
+ {n:"Seine",label:[1.7,49.25],pts:[[0.2,49.43],[0.9,49.43],[1.4,49.3],[2.0,49.0],[2.35,48.85],[3.0,48.55],[3.6,48.42],[4.3,48.3],[4.9,48.05]]},
+ {n:"Garonne",label:[0.4,44.32],pts:[[-0.61,45.03],[-0.57,44.84],[-0.42,44.66],[-0.25,44.62],[0.2,44.35],[0.7,44.18],[1.1,43.95],[1.42,43.62],[1.0,43.35],[0.6,43.1]]},
+ {n:"Dordogne",label:[1.25,44.74],pts:[[-0.6,45.04],[-0.32,44.96],[-0.05,44.89],[0.25,44.86],[0.55,44.85],[1.05,44.88],[1.55,44.95],[2.05,44.99],[2.5,45.02]]},
+ {n:"Rhône",label:[4.55,44.3],pts:[[5.1,46.3],[4.95,45.95],[4.84,45.75],[4.85,45.4],[4.8,45.0],[4.78,44.55],[4.7,44.1],[4.66,43.85],[4.84,43.6],[4.85,43.35]]},
+ {n:"Saône",label:[5.2,46.6],pts:[[5.5,47.5],[5.2,47.08],[4.95,46.78],[4.85,46.3],[4.84,45.78]]},
+ {n:"Rhin",label:[7.95,48.75],pts:[[7.59,47.6],[7.58,48.05],[7.75,48.5],[8.0,48.95],[8.2,49.0]]}
+];
+const CITIES=[
+ {n:"Paris",ll:[2.35,48.86]},{n:"Reims",ll:[4.03,49.26]},{n:"Strasbourg",ll:[7.75,48.58]},{n:"Colmar",ll:[7.36,48.08]},
+ {n:"Nantes",ll:[-1.55,47.22]},{n:"Angers",ll:[-0.55,47.34]},{n:"Tours",ll:[0.69,47.39]},{n:"Dijon",ll:[5.04,47.32]},
+ {n:"Beaune",ll:[4.84,47.03]},{n:"Lyon",ll:[4.84,45.76]},{n:"Avignon",ll:[4.81,43.95]},{n:"Montpellier",ll:[3.88,43.61]},
+ {n:"Marseille",ll:[5.37,43.3]},{n:"Toulouse",ll:[1.44,43.6]},{n:"Bordeaux",ll:[-0.58,44.84]},{n:"Libourne",ll:[-0.24,44.92]},{n:"Pau",ll:[-0.37,43.3]},
+ {n:"Besançon",ll:[6.02,47.24]},{n:"Ajaccio",ll:[8.74,41.92]},{n:"Bastia",ll:[9.45,42.7]},{n:"Perpignan",ll:[2.9,42.7]},{n:"Foix",ll:[1.61,42.96]}
+];
+
+// ---- Glossaire ----
+const GLOSSAIRE={
+ "Viticulture":[
+  {t:"Terroir",d:"Ensemble sol + climat + exposition + savoir-faire qui donne son identité à un vin."},
+  {t:"Cépage",d:"Variété de vigne (Pinot Noir, Chenin, Syrah…), chacune avec ses arômes propres."},
+  {t:"Climat",d:"En Bourgogne, parcelle délimitée et nommée, au terroir singulier (classés à l'UNESCO)."},
+  {t:"Lieu-dit",d:"Parcelle cadastrale historique pouvant figurer sur l'étiquette."},
+  {t:"Vieilles vignes",d:"Vignes âgées (souvent 40 ans et plus) : rendements faibles, jus concentrés."},
+  {t:"Vendanges tardives",d:"Raisins récoltés en surmaturité pour produire des vins moelleux."},
+  {t:"Pourriture noble (botrytis)",d:"Champignon qui concentre sucres et arômes — le secret de Sauternes."},
+  {t:"Biodynamie",d:"Viticulture bio enrichie de préparations naturelles et du calendrier lunaire."},
+  {t:"Phylloxéra",d:"Puceron qui détruisit le vignoble européen au XIXᵉ siècle ; d'où le greffage."},
+  {t:"Véraison",d:"Moment où le raisin change de couleur et entame sa maturation."},
+  {t:"Kimméridgien",d:"Sol calcaire marneux riche en fossiles marins (Chablis, sud de la Champagne)."}
+ ],
+ "Vinification":[
+  {t:"Assemblage",d:"Mariage de cépages, de parcelles ou de millésimes pour composer le vin final."},
+  {t:"Macération carbonique",d:"Vinification en grappes entières sous CO₂ : fruit éclatant (Beaujolais)."},
+  {t:"Élevage sur lies",d:"Vin laissé au contact des levures mortes : gras et complexité (Muscadet, Champagne)."},
+  {t:"Bâtonnage",d:"Remise en suspension des lies pour enrichir la texture du vin."},
+  {t:"Ouillage",d:"Remplissage régulier des fûts pour éviter l'oxydation ; « non ouillé » = style oxydatif."},
+  {t:"Vin sous voile",d:"Élevage sous un voile de levures (Vin Jaune du Jura) : notes de noix et de curry."},
+  {t:"Fermentation malolactique",d:"Seconde fermentation qui assouplit l'acidité du vin."},
+  {t:"Chaptalisation",d:"Ajout de sucre au moût pour augmenter le degré d'alcool (pratique encadrée)."},
+  {t:"Sulfites (SO₂)",d:"Antioxydant et antiseptique du vin ; les vins nature en limitent fortement l'usage."},
+  {t:"Vin nature",d:"Vinification sans intrants œnologiques, sulfites nuls ou très faibles."},
+  {t:"Prise de mousse",d:"Seconde fermentation en bouteille qui crée les bulles (méthode traditionnelle)."},
+  {t:"Dosage",d:"Liqueur ajoutée au champagne au dégorgement : du brut nature au doux."}
+ ],
+ "Dégustation":[
+  {t:"Tanin",d:"Composé issu des peaux et pépins qui structure et assèche ; s'assouplit avec l'âge."},
+  {t:"Acidité",d:"Colonne vertébrale de fraîcheur du vin ; essentielle à la garde."},
+  {t:"Gras",d:"Sensation de rondeur et de volume en bouche."},
+  {t:"Minéralité",d:"Impression saline ou pierreuse (silex, craie, iode)."},
+  {t:"Robe",d:"Couleur et aspect visuel du vin."},
+  {t:"Nez / bouquet",d:"Les arômes ; le bouquet désigne ceux acquis au vieillissement."},
+  {t:"Longueur (caudalie)",d:"Persistance aromatique après la gorgée ; 1 caudalie = 1 seconde."},
+  {t:"Carafage / décantation",d:"Aérer un vin jeune / séparer un vin âgé de son dépôt."},
+  {t:"Apogée",d:"Période où le vin exprime son plein potentiel."},
+  {t:"Réduction",d:"Notes fermées (allumette) d'un vin privé d'air ; s'estompe à l'aération."},
+  {t:"Oxydation",d:"Évolution au contact de l'air ; défaut… ou style assumé (Jura, VDN)."}
+ ],
+ "Appellations & étiquette":[
+  {t:"AOC / AOP",d:"Appellation d'origine contrôlée/protégée : zone, cépages et règles définis."},
+  {t:"IGP",d:"Indication géographique protégée, cadre plus souple que l'AOC."},
+  {t:"Vin de France",d:"Catégorie sans indication géographique : liberté maximale pour le vigneron."},
+  {t:"Grand Cru",d:"Sommet de la hiérarchie — au sens variable selon la région."},
+  {t:"Premier Cru",d:"Niveau sous le grand cru (Bourgogne, Champagne)."},
+  {t:"Cru classé",d:"Domaine distingué par un classement officiel (1855 à Bordeaux, etc.)."},
+  {t:"VDN (vin doux naturel)",d:"Fermentation stoppée à l'alcool : Banyuls, Maury, muscats."},
+  {t:"Mise au domaine",d:"Vin embouteillé chez le producteur lui-même."}
+ ]
+};
+
+// ---- État cave & filtres ----
+let CAVE=[]; // {id,name,region,regionLabel,sub,color,cepage,vintage,qty,price,apogee,note}
+let FILT={colors:new Set(),cepage:"",q:""};
+let showBadges=false, curK=1, LF=1, regOn=true;
+const NOW=new Date().getFullYear();
+
+function norm(s){return (s||"").normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();}
+const REGION_ALIAS={champagne:'champagne',alsace:'alsace',loire:'loire',bourgogne:'bourgogne',burgundy:'bourgogne',beaujolais:'beaujolais',jura:'jura',savoie:'savoie',rhone:'rhone','sud-ouest':'sudouest','sud ouest':'sudouest',sudouest:'sudouest',languedoc:'languedoc',roussillon:'languedoc',provence:'provence',corse:'corse',corsica:'corse'};
+function resolveRegion(name){const n=norm(name);if(!n)return '';for(const k in REGION_ALIAS){if(n.includes(k))return REGION_ALIAS[k];}return '';}
+function resolveSub(rid,name){if(!rid||!name)return '';const n=norm(name);const r=DATA[rid];if(!r)return '';const m=r.subs.find(s=>norm(s.n).includes(n)||n.includes(norm(s.n)));return m?m.n:'';}
+function resolveColor(s){const n=norm(s);if(/rouge|red/.test(n))return 'Rouge';if(/blanc|white/.test(n))return 'Blanc';if(/rose/.test(n))return 'Rosé';if(/eff|bulle|champ|cremant|mousseux|petillant/.test(n))return 'Effervescent';if(/liquoreux|moelleux|doux|sweet|vdn/.test(n))return 'Liquoreux';if(/orange/.test(n))return 'Orange';return s?s[0].toUpperCase()+s.slice(1):'';}
+function splitCSVLine(line){const out=[];let cur='',q=false;for(let i=0;i<line.length;i++){const c=line[i];if(c==='"'){if(q&&line[i+1]==='"'){cur+='"';i++;}else q=!q;}else if(c===','&&!q){out.push(cur);cur='';}else cur+=c;}out.push(cur);return out;}
+function parseCSV(text){const lines=text.split(/\r?\n/).filter(l=>l.trim()!=='');if(!lines.length)return [];const H=splitCSVLine(lines[0]).map(h=>norm(h));const field=h=>{if(/nom|name/.test(h))return 'name';if(/sous|sub/.test(h))return 'sub';if(/region/.test(h))return 'region';if(/couleur|color|type/.test(h))return 'color';if(/cepage/.test(h))return 'cepage';if(/millesime|vintage|annee/.test(h))return 'vintage';if(/quantite|qty|quantity|nombre/.test(h))return 'qty';if(/prix|price/.test(h))return 'price';if(/apogee|garde|apex/.test(h))return 'apogee';if(/note|commentaire/.test(h))return 'note';return null;};
+  const map=H.map(field);
+  return lines.slice(1).map(l=>{const c=splitCSVLine(l);const o={};map.forEach((f,i)=>{if(f)o[f]=(c[i]||'').trim();});return o;});}
+function addRaw(o){const rid=resolveRegion(o.region);CAVE.push({id:Date.now()+''+Math.random().toString(36).slice(2,6),name:o.name||'Vin sans nom',region:rid,regionLabel:o.region||(rid?DATA[rid].name:''),sub:resolveSub(rid,o.sub),color:resolveColor(o.color),cepage:o.cepage||'',vintage:(o.vintage||'').toString().trim(),qty:Math.max(1,parseInt(o.qty)||1),price:o.price?parseFloat((o.price+'').replace(',','.')):null,apogee:o.apogee?parseInt((o.apogee+'').match(/\d{4}/)?.[0]||''):null,note:o.note||''});}
+
+const W=640,H=680;
+const svg=d3.select("#map").attr("viewBox",`0 0 ${W} ${H}`);
+const bg=svg.append("rect").attr("width",W).attr("height",H).attr("fill","transparent");
+const scene=svg.append("g");
+const ids=Object.keys(DATA);
+let projection,zone,zoom,L={},ST={level:'intro'};
+
+const GEO_URL="https://raw.githubusercontent.com/gregoiredavid/france-geojson/master/metropole-version-simplifiee.geojson";
+const LABELLL={loire:[0.3,46.95],bourgogne:[4.05,47.7],alsace:[6.95,48.1],beaujolais:[4.55,46.3],bordeaux:[-0.9,44.72],sudouest:[0.6,44.15],provence:[6.35,43.65],corse:[9.2,41.78]};
+d3.json(GEO_URL).then(build).catch(err=>{document.getElementById("loading").innerHTML="Impossible de charger le fond de carte.<br>Vérifiez votre connexion, puis rechargez.";console.error(err);});
+
+function zonePath(arr){return zone(arr.map(p=>projection(p)));}
+function bounds(poly){const ps=poly.map(p=>projection(p));const xs=ps.map(p=>p[0]),ys=ps.map(p=>p[1]);return [Math.min(...xs),Math.min(...ys),Math.max(...xs),Math.max(...ys)];}
+function zoomTo(poly,maxk,pad){const [x0,y0,x1,y1]=bounds(poly);const bw=Math.max(x1-x0,1),bh=Math.max(y1-y0,1),cx=(x0+x1)/2,cy=(y0+y1)/2;const k=Math.max(1,Math.min(maxk,0.9*Math.min(W/(bw*pad),H/(bh*pad))));svg.transition().duration(820).call(zoom.transform,d3.zoomIdentity.translate(W/2,H/2).scale(k).translate(-cx,-cy));}
+
+function build(geo){
+  document.getElementById("loading").style.display="none";
+  projection=d3.geoMercator().fitExtent([[24,24],[W-24,H-24]],geo);
+  zone=d3.line().x(d=>d[0]).y(d=>d[1]).curve(d3.curveCatmullRomClosed.alpha(0.5));
+  const path=d3.geoPath(projection);
+  svg.append("defs").append("clipPath").attr("id","fr-clip").attr("clipPathUnits","userSpaceOnUse").append("path").attr("d",path(geo));
+  scene.append("path").attr("class","land").attr("d",path(geo));
+  const reliefG=scene.append("g").attr("clip-path","url(#fr-clip)").style("display","none");
+
+  const wineG=scene.append("g").attr("clip-path","url(#fr-clip)");
+  const regionsG=wineG.append("g"), subsWrap=wineG.append("g");
+  const riversG=scene.append("g").attr("clip-path","url(#fr-clip)").style("display","none");
+  const citiesG=scene.append("g").style("display","none");
+  const subLabelG=scene.append("g"), regLabelG=scene.append("g");
+  const subGroups={},subLabelGroups={};
+
+  ids.forEach(id=>{
+    const r=DATA[id];
+    regionsG.append("path").attr("class","region").attr("data-id",id).attr("tabindex",0)
+      .attr("d",zonePath(r.poly)).attr("fill",r.color).attr("fill-opacity",.6).attr("stroke",d3.color(r.color).darker(1.1))
+      .on("click",ev=>{ev.stopPropagation();focusRegion(id);})
+      .on("keydown",ev=>{if(ev.key==="Enter")focusRegion(id);});
+    const sg=subsWrap.append("g").attr("class","subs").attr("data-id",id);
+    const slg=subLabelG.append("g").attr("data-id",id);
+    r.subs.forEach((s,si)=>{
+      sg.append("path").attr("class","subzone").attr("data-si",si).attr("d",zonePath(s.poly))
+        .attr("fill",d3.color(r.color).brighter(.5)).attr("fill-opacity",.55).attr("stroke","#fff").attr("stroke-opacity",.55).attr("stroke-width",.8)
+        .on("click",ev=>{ev.stopPropagation();focusSub(id,si);});
+      const [lx,ly]=projection(s.ll);
+      const g2=slg.append("g").attr("class","sublabel-g").attr("data-x",lx).attr("data-y",ly);
+      const t2=g2.append("text").attr("class","sublabel").attr("text-anchor","middle").attr("dy","0.32em").attr("font-size",13).text(s.n);
+      const bb=t2.node().getBBox();
+      g2.insert("rect","text").attr("class","sublabel-bg").attr("x",bb.x-9).attr("y",bb.y-4).attr("width",bb.width+18).attr("height",bb.height+8).attr("rx",(bb.height+8)/2);
+      g2.attr("transform",`translate(${lx},${ly}) scale(1)`);
+    });
+    subGroups[id]=sg; subLabelGroups[id]=slg;
+    const [cx,cy]=projection(LABELLL[id]||r.ll);
+    const gl=regLabelG.append("g").attr("class","reglabel-g").attr("data-id",id).attr("data-x",cx).attr("data-y",cy);
+    gl.append("text").attr("class","reglabel-t").attr("dy","0.32em").attr("font-size",15)
+      .text(r.name.replace('Vallée de la ','').replace('Vallée du ','').replace('-Roussillon',''));
+    gl.attr("transform",`translate(${cx},${cy})`);
+  });
+
+  const badgesG=scene.append("g");
+  // dessin des couches géographiques
+  const lineOpen=d3.line().x(d=>d[0]).y(d=>d[1]).curve(d3.curveCatmullRom.alpha(0.5));
+  RELIEF.forEach(m=>reliefG.append("path").attr("class","relief").attr("d",zonePath(m.poly)));
+  RIVERS.forEach(rv=>{
+    riversG.append("path").attr("class","river").attr("d",lineOpen(rv.pts.map(p=>projection(p))));
+    const [lx,ly]=projection(rv.label);
+    const g=riversG.append("g").attr("class","geo-pin").attr("data-x",lx).attr("data-y",ly).attr("transform",`translate(${lx},${ly})`);
+    g.append("text").attr("class","riv-t").attr("font-size",11.5).text(rv.n);
+  });
+  CITIES.forEach(c=>{
+    const [x,y]=projection(c.ll);
+    const g=citiesG.append("g").attr("class","geo-pin").attr("data-x",x).attr("data-y",y).attr("transform",`translate(${x},${y})`);
+    g.append("circle").attr("class","city-dot").attr("r",2.4);
+    g.append("text").attr("class","city-t").attr("y",-6).attr("font-size",11.5).text(c.n);
+  });
+
+  zoom=d3.zoom().scaleExtent([1,16]).filter(e=>e.type!=="wheel"&&!e.ctrlKey)
+    .on("zoom",e=>{curK=e.transform.k;scene.attr("transform",e.transform);applyLabelScale();});
+  svg.call(zoom);
+  bg.on("click",()=>resetView());
+  L={regionsG,subsWrap,subGroups,subLabelGroups,regLabelG,badgesG,riversG,citiesG,reliefG};
+  initToolbar();
+  renderIntro();
+}
+
+// ---- Actions carte + état ----
+function focusRegion(id){
+  ST={level:'region',region:id};
+  LF=1.5; zoomTo(DATA[id].poly,13,1.12);
+  L.regionsG.selectAll(".region").transition().duration(450).attr("fill-opacity",function(){return this.getAttribute("data-id")===id?.78:.1;});
+  Object.entries(L.subGroups).forEach(([sid,g])=>{g.classed("show",sid===id);g.selectAll(".subzone").attr("fill-opacity",.55);});
+  Object.entries(L.subLabelGroups).forEach(([sid,g])=>g.selectAll(".sublabel-g").classed("show",sid===id));
+  applyRegLabels();
+  renderRegion(id); updateBadges(); resetBtnShow(true); setLayoutFocus(true); applyLabelScale();
+}
+function focusSub(id,si){
+  ST={level:'sub',region:id,sub:si};
+  LF=1.6; zoomTo(DATA[id].subs[si].poly,16,1.25);
+  L.regionsG.selectAll(".region").attr("fill-opacity",function(){return this.getAttribute("data-id")===id?.5:.08;});
+  Object.entries(L.subGroups).forEach(([sid,g])=>{g.classed("show",sid===id);
+    if(sid===id)g.selectAll(".subzone").attr("fill-opacity",function(){return +this.getAttribute("data-si")===si?.85:.2;});});
+  Object.entries(L.subLabelGroups).forEach(([sid,g])=>g.selectAll(".sublabel-g").classed("show",sid===id));
+  applyRegLabels();
+  renderSub(id,si); updateBadges(); resetBtnShow(true); setLayoutFocus(true); applyLabelScale();
+}
+function resetView(){
+  ST={level:'intro'};
+  svg.transition().duration(720).call(zoom.transform,d3.zoomIdentity);
+  L.regionsG.selectAll(".region").transition().duration(450).attr("fill-opacity",.6);
+  Object.values(L.subGroups).forEach(g=>{g.classed("show",false);g.selectAll(".subzone").attr("fill-opacity",.55);});
+  LF=1;
+  Object.values(L.subLabelGroups).forEach(g=>g.selectAll(".sublabel-g").classed("show",false));
+  applyRegLabels();
+  if(isFiltering())renderFilter(); else renderIntro();
+  applyMapFilter(); updateBadges(); setLayoutFocus(false); applyLabelScale();
+}
+
+// ---- Panneau ----
+const panel=document.getElementById("panel");
+function chips(arr,cls){return (arr&&arr.length?arr:["—"]).map(x=>`<span class="chip ${cls||''}">${x}</span>`).join('');}
+function grapeChips(arr){return (arr&&arr.length?arr:["—"]).map(x=> x==="—"?`<span class="chip">—</span>`:`<span class="chip grape" data-cep="${x.replace(/"/g,'')}">${x}</span>`).join('');}
+function crumbHTML(parts){return '<div class="crumbs">'+parts.map((p,i)=>{
+    const sep=i<parts.length-1?'<span class="sep">›</span>':'';
+    if(p.cur)return `<span class="cur">${p.label}</span>${sep}`;
+    return `<span class="c" data-act="${p.act}" data-a="${p.a??''}" data-b="${p.b??''}">${p.label}</span>${sep}`;
+  }).join('')+'</div>';}
+
+function wire(){
+  panel.querySelectorAll('.c').forEach(c=>c.addEventListener('click',()=>{
+    const act=c.dataset.act;
+    if(act==='france')resetView();
+    else if(act==='region')focusRegion(c.dataset.a);
+    else if(act==='sub')focusSub(c.dataset.a,+c.dataset.b);
+  }));
+  panel.querySelectorAll('.sublink').forEach(s=>s.addEventListener('click',()=>focusSub(s.dataset.r,+s.dataset.si)));
+  panel.querySelectorAll('.chip.grape').forEach(g=>g.addEventListener('click',()=>showCepage(g.dataset.cep)));
+  panel.querySelectorAll('.addhere').forEach(b=>b.addEventListener('click',()=>openModal(b.dataset.r,b.dataset.si)));
+  panel.querySelectorAll('.cave-list .del').forEach(b=>b.addEventListener('click',()=>{CAVE=CAVE.filter(w=>w.id!==b.dataset.id);refreshAfterCave();}));
+}
+
+function renderIntro(){
+  resetBtnShow(false); setLayoutFocus(false); applyRegLabels();
+  panel.innerHTML=`<div class="empty"><div class="glyph">&#127863;</div><h2>Explorez le terroir</h2>
+    <p>Cliquez une région, puis une sous-région, puis un cépage. Le fil d'Ariane en haut du panneau permet de remonter à tout moment.</p></div>`;
+}
+
+function renderRegion(id){
+  const r=DATA[id];
+  panel.innerHTML=`<div class="panel-inner" style="background:linear-gradient(180deg,${r.color}1f,rgba(0,0,0,0) 260px)">
+    ${crumbHTML([{label:'France',act:'france'},{label:r.name,cur:true}])}
+    <p class="tier">Région</p><div class="rname">${r.name}</div>
+    <div class="accent-rule" style="background:${r.color}"></div>
+    <p class="prose lead" style="margin-bottom:18px">${r.styleVin||PH}</p>
+    <section class="block"><h3>Sous-régions</h3><div class="chips">${r.subs.map((s,i)=>`<span class="chip sublink" data-r="${id}" data-si="${i}">${s.n}</span>`).join('')}</div></section>
+    <section class="block"><h3>Type de vins</h3><div class="chips">${chips(r.types,'type')}</div></section>
+    <p class="statline">Vignoble : ${r.superficie||PH} · ${r.production||PH}</p>
+    <section class="block"><h3>Cépages principaux</h3><div class="chips">${grapeChips(r.cepages)}</div></section>
+    ${(r.cepagesRares&&r.cepagesRares.length)?`<section class="block"><h3>Cépages rares</h3><div class="chips">${grapeChips(r.cepagesRares)}</div></section>`:''}
+    <section class="block"><h3>AOC / AOP</h3><div class="chips">${chips(r.aoc,'aoc')}</div></section>
+    <section class="block"><h3>Domaines les plus connus</h3><div class="chips">${chips(r.domaines,'dom')}</div></section>
+    ${(EXTRA[id]&&EXTRA[id].classement)?`<section class="block"><h3>Classements &amp; hiérarchie</h3><p class="prose">${EXTRA[id].classement}</p></section>`:''}
+    <section class="block"><h3>Histoire &amp; vin</h3><p class="prose">${(EXTRA[id]&&EXTRA[id].histoire)||PH}</p></section>
+    ${caveSectionHTML(w=>w.region===id,id,'')}
+  </div>`;
+  wire();
+}
+
+function renderSub(id,si){
+  const r=DATA[id],s=r.subs[si];
+  panel.innerHTML=`<div class="panel-inner" style="background:linear-gradient(180deg,${r.color}1f,rgba(0,0,0,0) 260px)">
+    ${crumbHTML([{label:'France',act:'france'},{label:r.name,act:'region',a:id},{label:s.n,cur:true}])}
+    <p class="tier">Sous-région · ${r.name}</p><div class="rname">${s.n}</div>
+    <div class="accent-rule" style="background:${r.color}"></div>
+    <section class="block"><h3>Type de vins</h3><div class="chips">${chips(s.types,'type')}</div></section>
+    <section class="block"><h3>Cépages & style</h3><div class="chips">${grapeChips(s.cepages)}</div>${(s.cepagesRares&&s.cepagesRares.length)?`<div class="chips" style="margin-top:6px">${grapeChips(s.cepagesRares)}</div>`:''}<p class="prose" style="margin-top:9px">${s.cepageStyle||PH}</p></section>
+    <section class="block"><h3>AOC / AOP</h3><div class="chips">${chips(s.aoc,'aoc')}</div></section>
+    <section class="block"><h3>Domaines</h3><div class="chips">${chips(s.domaines,'dom')}</div></section>
+    <section class="block"><h3>Millésimes</h3><div class="mill">
+      <div class="col"><div class="lab best">Meilleurs</div><div class="chips">${s.millBest?chips(s.millBest):PH}</div></div>
+      <div class="col"><div class="lab worst">Moins bons</div><div class="chips">${s.millWorst?chips(s.millWorst):PH}</div></div>
+    </div></section>
+    ${s.classement?`<section class="block"><h3>Classements &amp; hiérarchie</h3><p class="prose">${s.classement}</p></section>`:''}
+    ${caveSectionHTML(w=>w.region===id&&w.sub===s.n,id,s.n)}
+  </div>`;
+  wire();
+}
+
+function showCepage(name){
+  const parent={...ST};
+  const c=CEPAGES[name]||{};
+  const crumbs=[{label:'France',act:'france'}];
+  if(parent.region)crumbs.push({label:DATA[parent.region].name,act:'region',a:parent.region});
+  if(parent.level==='sub')crumbs.push({label:DATA[parent.region].subs[parent.sub].n,act:'sub',a:parent.region,b:parent.sub});
+  crumbs.push({label:name,cur:true});
+  ST={level:'cepage',cepage:name,parent};
+  panel.innerHTML=`<div class="panel-inner">
+    ${crumbHTML(crumbs)}
+    <p class="tier">Cépage</p><div class="rname">${name}</div>
+    <div class="accent-rule" style="background:var(--wine)"></div>
+    <section class="block"><h3>Arômes & saveurs</h3><div class="chips">${c.aromes?chips(c.aromes):PH}</div></section>
+    <section class="block"><h3>Accords mets &amp; vins</h3><div class="chips">${c.accords?chips(c.accords):PH}</div></section>
+  </div>`;
+  wire(); resetBtnShow(true); setLayoutFocus(true);
+}
+
+function esc(s){return (s+'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function resetBtnShow(v){const b=document.getElementById('resetBtn');if(b)b.classList.toggle('show',v);}
+function setLayoutFocus(v){const l=document.getElementById('layout');if(l)l.classList.toggle('focused',v);}
+function applyLabelScale(){
+  const f=LF/curK;
+  scene.selectAll(".reglabel-g,.sublabel-g,.geo-pin").attr("transform",function(){return "translate("+this.getAttribute("data-x")+","+this.getAttribute("data-y")+") scale("+f+")";});
+  scaleBadges();
+}
+function applyRegLabels(){
+  const focus=(ST.level==='region'||ST.level==='sub');
+  if(L.regLabelG)L.regLabelG.selectAll(".reglabel-g").style("opacity",(!focus&&regOn)?1:0);
+}
+
+// ---- Cave dans le panneau ----
+function caveSectionHTML(pred,rid,sub){
+  const list=CAVE.filter(pred);
+  const cnt=list.reduce((a,w)=>a+w.qty,0);
+  const inner=list.length
+    ? `<ul class="cave-list">`+list.map(w=>`<li><span class="nm">${esc(w.name)}</span> <span class="meta">${[w.color,w.vintage,(w.qty>1?'×'+w.qty:'')].filter(Boolean).join(' · ')}${w.note?' — '+esc(w.note):''}</span><button class="del" data-id="${w.id}" title="Retirer">×</button></li>`).join('')+`</ul>`
+    : `<p class="cave-empty">Aucun vin de votre cave ici pour l'instant.</p>`;
+  const si=sub&&DATA[rid]?DATA[rid].subs.findIndex(s=>s.n===sub):'';
+  return `<section class="block cave-block"><h3>&#127863; Ma cave${cnt?' ('+cnt+')':''}</h3>${inner}<button class="addhere" data-r="${rid}" data-si="${si}">+ Ajouter un vin ici</button></section>`;
+}
+function refreshAfterCave(){
+  updateBadges();
+  if(ST.level==='region')renderRegion(ST.region);
+  else if(ST.level==='sub')renderSub(ST.region,ST.sub);
+  else if(ST.level==='dashboard')renderDashboard();
+}
+
+// ---- Filtres ----
+function activeColors(){return [...document.querySelectorAll('.cfilter.on')].map(b=>b.dataset.color);}
+function isFiltering(){return FILT.q.trim()!==''||FILT.cepage!==''||activeColors().length>0;}
+function matchRegion(id){
+  const r=DATA[id],ex=EXTRA[id]||{},cols=activeColors();
+  if(cols.length){const rc=ex.colors||[];if(!cols.some(c=>rc.includes(c)))return false;}
+  if(FILT.cepage&&!r.cepages.includes(FILT.cepage))return false;
+  const q=FILT.q.trim().toLowerCase();
+  if(q){const hay=[r.name,...r.subs.map(s=>s.n),...r.cepages,...r.aoc,...r.domaines,r.styleVin,(ex.histoire||'')].join(' ').toLowerCase();if(!hay.includes(q))return false;}
+  return true;
+}
+function matchedIds(){return ids.filter(matchRegion);}
+function applyMapFilter(){
+  if(ST.level==='region'||ST.level==='sub')return;
+  if(!isFiltering()){L.regionsG.selectAll('.region').attr('fill-opacity',.6);return;}
+  const set=new Set(matchedIds());
+  L.regionsG.selectAll('.region').attr('fill-opacity',function(){return set.has(this.getAttribute('data-id'))?.72:.08;});
+}
+function renderFilter(){
+  ST={level:'filter'}; resetBtnShow(false); setLayoutFocus(false); applyRegLabels();
+  const list=matchedIds();
+  panel.innerHTML=`<div class="panel-inner">
+    <p class="tier">Filtres</p><div class="rname" style="font-size:28px">${list.length} région${list.length>1?'s':''}</div>
+    <div class="accent-rule" style="background:var(--wine)"></div>
+    <p class="prose" style="margin-bottom:14px">${list.length?'Cliquez une région pour ouvrir sa fiche :':'Aucune région ne correspond à ces critères.'}</p>
+    <div class="chips">${list.map(id=>`<span class="chip" data-go="${id}" style="border-color:${DATA[id].color}88;cursor:pointer">${DATA[id].name}</span>`).join('')}</div></div>`;
+  panel.querySelectorAll('[data-go]').forEach(c=>c.addEventListener('click',()=>focusRegion(c.dataset.go)));
+}
+function onFilterChange(){
+  markFilterActive();
+  if(ST.level==='region'||ST.level==='sub'||ST.level==='cepage'){applyMapFilter();return;}
+  if(isFiltering())renderFilter(); else renderIntro();
+  applyMapFilter();
+}
+
+// ---- Tableau de bord ----
+function renderDashboard(){
+  ST={level:'dashboard'}; resetBtnShow(true); setLayoutFocus(true);
+  const total=CAVE.reduce((a,w)=>a+w.qty,0);
+  const value=CAVE.reduce((a,w)=>a+(w.price?w.price*w.qty:0),0);
+  const group=fn=>{const m={};CAVE.forEach(w=>{const k=fn(w)||'—';m[k]=(m[k]||0)+w.qty;});return Object.entries(m).sort((a,b)=>b[1]-a[1]);};
+  const byRegion=group(w=>w.region?DATA[w.region].name:(w.regionLabel||'Non classé'));
+  const byColor=group(w=>w.color||'—');
+  const byVintage=group(w=>w.vintage||'—');
+  const soon=CAVE.filter(w=>w.apogee&&w.apogee<=NOW+1).sort((a,b)=>a.apogee-b.apogee);
+  const bar=rows=>{if(!rows.length)return '<p class="cave-empty">—</p>';const max=Math.max(1,...rows.map(r=>r[1]));return rows.map(([k,v])=>`<div class="dbar"><div class="dbar-l">${esc(k)}</div><div class="dbar-track"><div class="dbar-fill" style="width:${v/max*100}%"></div></div><div class="dbar-v">${v}</div></div>`).join('');};
+  panel.innerHTML=`<div class="panel-inner dash">
+    <div class="crumbs"><span class="c" data-back="1">‹ Retour à la carte</span></div>
+    <h2>Tableau de bord</h2>
+    <div class="dcards">
+      <div class="dcard"><div class="lab">Bouteilles</div><div class="val">${total}</div></div>
+      <div class="dcard"><div class="lab">Références</div><div class="val">${CAVE.length}</div></div>
+      <div class="dcard"><div class="lab">Valeur estimée</div><div class="val">${value?Math.round(value).toLocaleString('fr-FR')+' €':'—'}</div></div>
+    </div>
+    <section class="block"><h3>Par région</h3>${bar(byRegion)}</section>
+    <section class="block"><h3>Par couleur</h3>${bar(byColor)}</section>
+    <section class="block"><h3>Par millésime</h3>${bar(byVintage)}</section>
+    <section class="block"><h3>À boire bientôt</h3>${soon.length?'<ul class="soon">'+soon.map(w=>`<li>${esc(w.name)} ${w.vintage?'('+w.vintage+')':''}<span class="tag ${w.apogee<NOW?'past':'now'}">${w.apogee<NOW?'apogée passée':'apogée '+w.apogee}</span></li>`).join('')+'</ul>':`<p class="cave-empty">Aucune alerte. Renseignez l'apogée de vos vins pour activer ce suivi.</p>`}</section>
+    ${total===0?`<p class="cave-empty" style="margin-top:8px">Cave vide — ajoutez ou importez des vins via la barre d'outils.</p>`:''}
+  </div>`;
+  panel.querySelector('[data-back]').addEventListener('click',()=>{if(isFiltering())renderFilter();else renderIntro();applyMapFilter();});
+}
+
+// ---- Badges carte ----
+function updateBadges(){
+  if(!L.badgesG)return;
+  L.badgesG.selectAll('*').remove();
+  if(!showBadges)return;
+  const focused=(ST.level==='region'||ST.level==='sub')?ST.region:null;
+  if(!focused){
+    ids.forEach(id=>{const n=CAVE.filter(w=>w.region===id).reduce((a,w)=>a+w.qty,0);if(n){const [x,y]=projection(DATA[id].ll);drawBadge(x,y,n);}});
+  }else{
+    DATA[focused].subs.forEach(s=>{const n=CAVE.filter(w=>w.region===focused&&w.sub===s.n).reduce((a,w)=>a+w.qty,0);if(n){const [x,y]=projection(s.ll);drawBadge(x,y,n);}});
+  }
+}
+function drawBadge(x,y,n){
+  const grp=L.badgesG.append('g').attr('class','cbadge').attr('data-x',x).attr('data-y',y).style('pointer-events','none');
+  grp.append('circle').attr('r',9);
+  grp.append('text').attr('y',3.6).attr('font-size',11).text(n);
+  badgeTransform(grp,x,y);
+}
+function badgeTransform(grp,x,y){grp.attr('transform',`translate(${x},${y}) scale(${LF/curK}) translate(0,-18)`);}
+function scaleBadges(){if(L.badgesG)L.badgesG.selectAll('.cbadge').each(function(){const g=d3.select(this);badgeTransform(g,+g.attr('data-x'),+g.attr('data-y'));});}
+
+// ---- Cave : modal, import, export ----
+const overlay=document.getElementById('overlay');
+function fillRegionSelect(){const sel=document.getElementById('f_region');sel.innerHTML='<option value="">—</option>'+ids.map(id=>`<option value="${id}">${DATA[id].name}</option>`).join('');}
+function fillSubSelect(rid){const sel=document.getElementById('f_sub');const subs=rid&&DATA[rid]?DATA[rid].subs:[];sel.innerHTML='<option value="">—</option>'+subs.map(s=>`<option value="${esc(s.n)}">${esc(s.n)}</option>`).join('');}
+function openModal(rid,si){fillRegionSelect();document.getElementById('f_region').value=rid||'';fillSubSelect(rid||'');
+  if(si!==undefined&&si!==''&&si!=='-1'&&rid&&DATA[rid]&&DATA[rid].subs[+si])document.getElementById('f_sub').value=DATA[rid].subs[+si].n;
+  ['f_name','f_vintage','f_price','f_apogee','f_cepage','f_note'].forEach(i=>document.getElementById(i).value='');
+  document.getElementById('f_qty').value=1;
+  overlay.classList.add('open');document.getElementById('f_name').focus();}
+function closeModal(){overlay.classList.remove('open');}
+function saveWine(){
+  const name=document.getElementById('f_name').value.trim();if(!name){document.getElementById('f_name').focus();return;}
+  const rid=document.getElementById('f_region').value;
+  addRaw({name,region:rid?DATA[rid].name:'',sub:document.getElementById('f_sub').value,color:document.getElementById('f_color').value,vintage:document.getElementById('f_vintage').value,qty:document.getElementById('f_qty').value,price:document.getElementById('f_price').value,apogee:document.getElementById('f_apogee').value,cepage:document.getElementById('f_cepage').value,note:document.getElementById('f_note').value});
+  closeModal();refreshAfterCave();
+}
+function normalizeWine(w){return {id:w.id||Date.now()+''+Math.random().toString(36).slice(2,6),name:w.name||'Vin',region:DATA[w.region]?w.region:'',regionLabel:w.regionLabel||(DATA[w.region]?DATA[w.region].name:''),sub:w.sub||'',color:w.color||'',cepage:w.cepage||'',vintage:(w.vintage||'')+'',qty:Math.max(1,parseInt(w.qty)||1),price:(w.price!=null&&w.price!=='')?parseFloat(w.price):null,apogee:w.apogee?parseInt((w.apogee+'').match(/\d{4}/)?.[0]||''):null,note:w.note||''};}
+function importFile(file){const rd=new FileReader();
+  rd.onload=()=>{try{const txt=rd.result;
+    if(/\.json$/i.test(file.name)||txt.trim().startsWith('[')||txt.trim().startsWith('{')){
+      const data=JSON.parse(txt);const arr=Array.isArray(data)?data:Object.values(data).flat();
+      arr.forEach(w=>{if(w&&typeof w==='object'){if(w.region&&DATA[w.region])CAVE.push(normalizeWine(w));else addRaw({name:w.name,region:w.regionLabel||w.region,sub:w.sub,color:w.color,vintage:w.vintage,qty:w.qty,price:w.price,apogee:w.apogee,cepage:w.cepage,note:w.note});}});
+    }else{parseCSV(txt).forEach(addRaw);}
+    refreshAfterCave();alert(CAVE.reduce((a,w)=>a+w.qty,0)+' bouteille(s) dans la cave après import.');
+  }catch(err){alert('Import impossible : fichier invalide.');console.error(err);}};
+  rd.readAsText(file);}
+function exportCave(){const blob=new Blob([JSON.stringify(CAVE,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='ma-cave.json';a.click();URL.revokeObjectURL(a.href);}
+function downloadCSVTemplate(){const csv='nom,region,sous-region,couleur,cepage,millesime,quantite,prix,apogee,note\nVouvray Sec - Clos Naudin,Loire,Touraine,Blanc,Chenin blanc,2020,2,32,2030,à carafer\nMorgon Côte du Py - Foillard,Beaujolais,Crus du Beaujolais,Rouge,Gamay,2023,1,27,2030,\n';const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='modele-cave.csv';a.click();URL.revokeObjectURL(a.href);}
+
+function initToolbar(){
+  const cepSet=new Set();ids.forEach(id=>DATA[id].cepages.forEach(c=>cepSet.add(c)));
+  const sorted=[...cepSet].sort((a,b)=>a.localeCompare(b,'fr'));
+  const cf=document.getElementById('cepFilter'),dl=document.getElementById('cepDatalist');
+  sorted.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;cf.appendChild(o);const o2=document.createElement('option');o2.value=c;dl.appendChild(o2);});
+  document.getElementById('search').addEventListener('input',e=>{FILT.q=e.target.value;onFilterChange();});
+  cf.addEventListener('change',e=>{FILT.cepage=e.target.value;onFilterChange();});
+  document.querySelectorAll('.cfilter').forEach(b=>b.addEventListener('click',()=>{b.classList.toggle('on');onFilterChange();}));
+  document.getElementById('dashBtn').addEventListener('click',renderDashboard);
+  document.getElementById('addBtn').addEventListener('click',()=>openModal(ST.region||'',ST.level==='sub'?ST.sub:''));
+  document.getElementById('expBtn').addEventListener('click',exportCave);
+  document.getElementById('impBtn').addEventListener('click',()=>document.getElementById('impFile').click());
+  document.getElementById('impFile').addEventListener('change',e=>{if(e.target.files[0])importFile(e.target.files[0]);e.target.value='';});
+  document.getElementById('badgeBtn').addEventListener('click',()=>{showBadges=!showBadges;document.getElementById('badgeBtn').classList.toggle('on',showBadges);updateBadges();});
+  document.getElementById('cancelWine').addEventListener('click',closeModal);
+  document.getElementById('saveWine').addEventListener('click',saveWine);
+  document.getElementById('f_region').addEventListener('change',e=>fillSubSelect(e.target.value));
+  document.getElementById('csvTemplate').addEventListener('click',downloadCSVTemplate);
+  document.getElementById('resetBtn').addEventListener('click',resetView);
+  const tog=(id,fn)=>{const b=document.getElementById(id);b.addEventListener('click',()=>{fn(b.classList.toggle('on'));});};
+  tog('rivBtn',on=>L.riversG.style('display',on?null:'none'));
+  tog('cityBtn',on=>L.citiesG.style('display',on?null:'none'));
+  tog('relBtn',on=>L.reliefG.style('display',on?null:'none'));
+  document.getElementById('regBtn').addEventListener('click',()=>{regOn=document.getElementById('regBtn').classList.toggle('on');applyRegLabels();});
+  setupDropdowns();
+  const gOv=document.getElementById('glossOverlay');
+  document.getElementById('glossBtn').addEventListener('click',()=>{document.getElementById('glossSearch').value='';renderGloss('');gOv.classList.add('open');});
+  document.getElementById('glossClose').addEventListener('click',()=>gOv.classList.remove('open'));
+  gOv.addEventListener('click',e=>{if(e.target===gOv)gOv.classList.remove('open');});
+  document.getElementById('glossSearch').addEventListener('input',e=>renderGloss(e.target.value));
+  overlay.addEventListener('click',e=>{if(e.target===overlay)closeModal();});
+}
+
+function setupDropdowns(){
+  const dds=[...document.querySelectorAll('.dd')];
+  dds.forEach(dd=>{
+    const btn=dd.querySelector('.ddbtn');
+    btn.addEventListener('click',e=>{e.stopPropagation();const willOpen=!dd.classList.contains('open');dds.forEach(d=>{d.classList.remove('open');d.querySelector('.ddbtn').classList.remove('open');});if(willOpen){dd.classList.add('open');btn.classList.add('open');}});
+    dd.querySelector('.ddpanel').addEventListener('click',e=>e.stopPropagation());
+  });
+  document.addEventListener('click',()=>dds.forEach(d=>{d.classList.remove('open');d.querySelector('.ddbtn').classList.remove('open');}));
+}
+function markFilterActive(){
+  const typeOn=document.querySelectorAll('.cfilter.on').length>0;
+  const cepOn=FILT.cepage!=='';
+  const tb=document.querySelector('#dd-type .ddbtn'),cb=document.getElementById('cepFilter');
+  if(tb)tb.classList.toggle('active-filter',typeOn);
+  if(cb)cb.classList.toggle('active-filter',cepOn);
+}
+
+function renderGloss(q){
+  const body=document.getElementById('glossBody');
+  const nq=norm(q||'');
+  let html='';
+  Object.entries(GLOSSAIRE).forEach(([cat,terms])=>{
+    const keep=terms.filter(x=>!nq||norm(x.t+' '+x.d).includes(nq));
+    if(!keep.length)return;
+    html+=`<div class="gcat">${cat}</div>`+keep.map(x=>`<p class="gterm"><b>${x.t}</b> — ${x.d}</p>`).join('');
+  });
+  body.innerHTML=html||'<p class="gnone">Aucun terme trouvé.</p>';
+}
+</script>
+</body>
+</html>
