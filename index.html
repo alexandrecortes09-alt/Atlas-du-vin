@@ -200,6 +200,7 @@
   body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.05;background-size:220px;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220' viewBox='0 0 220 220'%3E%3Cg fill='none' stroke='%23e0c483' stroke-width='1.1'%3E%3Ccircle cx='60' cy='64' r='7'/%3E%3Ccircle cx='74' cy='70' r='7'/%3E%3Ccircle cx='66' cy='80' r='7'/%3E%3Cpath d='M67 54 q4 -16 20 -20'/%3E%3Cpath d='M87 34 q16 2 13 18 q-16 -1 -13 -18'/%3E%3C/g%3E%3C/svg%3E");}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 <div class="wrap">
@@ -249,6 +250,7 @@
       </div>
       <button class="tbtn gold" id="dashBtn">Tableau de bord</button>
       <button class="tbtn gold" id="glossBtn">Glossaire</button>
+      <div class="acct" id="acctArea"><button class="tbtn acct-btn" id="acctBtn">Se connecter</button></div>
       <input type="file" id="impFile" accept=".csv,.json,application/json,text/csv" style="display:none">
     </div>
   </div>
@@ -303,6 +305,12 @@
 </div>
 
 <script>
+const SB_URL='https://amnlylzpecwnwftxcqxb.supabase.co';
+const SB_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFtbmx5bHpwZWN3bndmdHhjcXhiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE5NTEyMTUsImV4cCI6MjA5NzUyNzIxNX0.GT__4dE1kC-GKFo-KOVVLW3kf3AUKjcOYWKbNRNLDlg';
+const sb = window.supabase ? window.supabase.createClient(SB_URL,SB_ANON) : null;
+let currentUser=null, pendingAuthAction=null;
+function requireAuth(action){ if(currentUser){action();} else { pendingAuthAction=action; (window.openAuth||function(){})('Connectez-vous ou créez un compte pour accéder à votre cave.'); } }
+
 const PH='<span class="ph">à compléter</span>';
 
 // ---- Dictionnaire de cépages (arômes / accords) ----
@@ -910,10 +918,10 @@ function initToolbar(){
   document.getElementById('search').addEventListener('input',e=>{FILT.q=e.target.value;onFilterChange();});
   cf.addEventListener('change',e=>{FILT.cepage=e.target.value;onFilterChange();});
   document.querySelectorAll('.cfilter').forEach(b=>b.addEventListener('click',()=>{b.classList.toggle('on');onFilterChange();}));
-  document.getElementById('dashBtn').addEventListener('click',renderDashboard);
-  document.getElementById('addBtn').addEventListener('click',()=>openModal(ST.region||'',ST.level==='sub'?ST.sub:''));
-  document.getElementById('expBtn').addEventListener('click',exportCave);
-  document.getElementById('impBtn').addEventListener('click',()=>document.getElementById('impFile').click());
+  document.getElementById('dashBtn').addEventListener('click',()=>requireAuth(renderDashboard));
+  document.getElementById('addBtn').addEventListener('click',()=>requireAuth(()=>openModal(ST.region||'',ST.level==='sub'?ST.sub:'')));
+  document.getElementById('expBtn').addEventListener('click',()=>requireAuth(exportCave));
+  document.getElementById('impBtn').addEventListener('click',()=>requireAuth(()=>document.getElementById('impFile').click()));
   document.getElementById('impFile').addEventListener('change',e=>{if(e.target.files[0])importFile(e.target.files[0]);e.target.value='';});
   document.getElementById('badgeBtn').addEventListener('click',()=>{showBadges=!showBadges;document.getElementById('badgeBtn').classList.toggle('on',showBadges);updateBadges();});
   document.getElementById('cancelWine').addEventListener('click',closeModal);
@@ -964,5 +972,121 @@ function renderGloss(q){
   body.innerHTML=html||'<p class="gnone">Aucun terme trouvé.</p>';
 }
 </script>
+
+<style>
+#authModal{display:none;position:fixed;inset:0;z-index:9999;background:rgba(12,6,9,.72);align-items:center;justify-content:center;font-family:'Spectral',serif;}
+.auth-card{width:min(420px,92vw);background:linear-gradient(180deg,#23121a,#1a0d13);border:1px solid rgba(201,162,75,.3);border-radius:16px;padding:30px 28px;box-shadow:0 30px 80px -20px rgba(0,0,0,.8);position:relative;}
+.auth-card h2{font-family:'Fraunces',serif;font-weight:600;font-size:24px;color:#f1e6d6;margin:0 0 4px;}
+.auth-sub{color:#b29a8c;font-size:13px;margin-bottom:20px;}
+.auth-tabs{display:flex;gap:6px;margin-bottom:20px;background:rgba(0,0,0,.25);padding:4px;border-radius:10px;}
+.auth-tabs button{flex:1;padding:9px;border:none;background:none;color:#b29a8c;font-family:'Spectral';font-size:13px;letter-spacing:.04em;border-radius:7px;cursor:pointer;transition:.2s;}
+.auth-tabs button.on{background:rgba(201,162,75,.16);color:#e0c483;}
+.auth-field{margin-bottom:14px;}
+.auth-field label{display:block;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#b29a8c;margin-bottom:6px;}
+.auth-field input{width:100%;background:rgba(0,0,0,.3);border:1px solid rgba(201,162,75,.22);border-radius:8px;padding:11px 13px;color:#f1e6d6;font-family:'Spectral';font-size:14px;outline:none;box-sizing:border-box;}
+.auth-field input:focus{border-color:rgba(201,162,75,.6);}
+.auth-submit{width:100%;margin-top:6px;padding:13px;border:none;border-radius:9px;background:linear-gradient(135deg,#d9b65f,#bd923c);color:#241218;font-family:'Spectral';font-weight:600;font-size:14px;letter-spacing:.06em;cursor:pointer;}
+.auth-submit:disabled{opacity:.6;cursor:default;}
+.auth-msg{min-height:18px;margin-top:12px;font-size:12.5px;color:#b29a8c;text-align:center;line-height:1.4;}
+.auth-msg.err{color:#e8889a;}
+.auth-msg.ok{color:#9ccf9c;}
+.auth-close{position:absolute;top:12px;right:15px;background:none;border:none;color:#b29a8c;font-size:24px;cursor:pointer;line-height:1;}
+.auth-foot{margin-top:16px;text-align:center;font-size:11px;color:#7c6a5e;}
+.acct{display:flex;align-items:center;gap:10px;}
+.acct-email{display:flex;align-items:center;gap:7px;color:#e0c483;font-size:12.5px;max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.acct-dot{width:7px;height:7px;border-radius:50%;background:#7bbf7b;flex:none;}
+.tbtn.acct-logout{font-size:11px;}
+</style>
+<div id="authModal">
+  <div class="auth-card">
+    <button class="auth-close" id="authClose" aria-label="Fermer">&times;</button>
+    <h2 id="authTitle">Connexion</h2>
+    <p class="auth-sub">Accédez à votre cave personnelle Mappa Vini Terra.</p>
+    <div class="auth-tabs">
+      <button id="tabLogin" class="on">Connexion</button>
+      <button id="tabSignup">Inscription</button>
+    </div>
+    <form id="authForm">
+      <div class="auth-field"><label>Email</label><input id="authEmail" type="email" autocomplete="email" placeholder="vous@exemple.fr"></div>
+      <div class="auth-field"><label>Mot de passe</label><input id="authPass" type="password" autocomplete="current-password" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;"></div>
+      <button type="submit" class="auth-submit" id="authSubmit">Se connecter</button>
+      <div class="auth-msg" id="authMsg"></div>
+    </form>
+    <p class="auth-foot">Vos données de cave sont privées et sécurisées.</p>
+  </div>
+</div>
+
+<script>
+(function(){
+  if(!sb){ console.warn('Supabase non chargé'); return; }
+  const modal=document.getElementById('authModal');
+  const tabLogin=document.getElementById('tabLogin');
+  const tabSignup=document.getElementById('tabSignup');
+  const form=document.getElementById('authForm');
+  const emailEl=document.getElementById('authEmail');
+  const passEl=document.getElementById('authPass');
+  const submitBtn=document.getElementById('authSubmit');
+  const msgEl=document.getElementById('authMsg');
+  const titleEl=document.getElementById('authTitle');
+  const closeBtn=document.getElementById('authClose');
+  let mode='login';
+  function setMode(m){ mode=m;
+    tabLogin.classList.toggle('on',m==='login');
+    tabSignup.classList.toggle('on',m==='signup');
+    titleEl.textContent=(m==='login')?'Connexion':'Créer un compte';
+    submitBtn.textContent=(m==='login')?'Se connecter':'Créer mon compte';
+  }
+  function showMsg(t,type){ msgEl.textContent=t; msgEl.className='auth-msg'+(type?(' '+type):''); }
+  window.openAuth=function(message){ showMsg(message||'', message?'':''); modal.style.display='flex'; setMode('login'); setTimeout(()=>emailEl.focus(),50); };
+  window.closeAuth=function(){ modal.style.display='none'; };
+  tabLogin.onclick=()=>{showMsg('');setMode('login');};
+  tabSignup.onclick=()=>{showMsg('');setMode('signup');};
+  closeBtn.onclick=window.closeAuth;
+  modal.addEventListener('click',e=>{ if(e.target===modal) window.closeAuth(); });
+  function traduire(m){
+    if(/Invalid login credentials/i.test(m))return 'Email ou mot de passe incorrect.';
+    if(/already registered/i.test(m))return 'Cet email a déjà un compte. Connectez-vous.';
+    if(/at least 6/i.test(m))return 'Le mot de passe doit faire au moins 6 caractères.';
+    if(/Email not confirmed/i.test(m))return 'Confirmez votre email (lien reçu par mail) avant de vous connecter.';
+    if(/valid email/i.test(m))return 'Adresse email invalide.';
+    return m;
+  }
+  function onAuthed(){ window.closeAuth(); passEl.value=''; if(typeof pendingAuthAction==='function'){ const a=pendingAuthAction; pendingAuthAction=null; a(); } }
+  form.addEventListener('submit',async e=>{
+    e.preventDefault();
+    const email=emailEl.value.trim(), pass=passEl.value;
+    if(!email||!pass){ showMsg('Renseignez votre email et votre mot de passe.','err'); return; }
+    submitBtn.disabled=true; submitBtn.textContent='…';
+    try{
+      if(mode==='signup'){
+        const {data,error}=await sb.auth.signUp({email:email,password:pass});
+        if(error)throw error;
+        if(data.session){ onAuthed(); }
+        else { showMsg('Compte créé ! Vérifiez votre boîte mail pour confirmer votre adresse, puis connectez-vous.','ok'); setMode('login'); }
+      } else {
+        const {error}=await sb.auth.signInWithPassword({email:email,password:pass});
+        if(error)throw error;
+        onAuthed();
+      }
+    }catch(err){ showMsg(traduire(err.message||'Une erreur est survenue.'),'err'); }
+    finally{ submitBtn.disabled=false; setMode(mode); }
+  });
+  window.refreshAuthUI=function(){
+    const area=document.getElementById('acctArea'); if(!area)return;
+    if(currentUser){
+      const email=currentUser.email||'Mon compte';
+      area.innerHTML='<span class="acct-email" title="'+email+'"><span class="acct-dot"></span>'+email+'</span><button class="tbtn acct-logout" id="logoutBtn">Déconnexion</button>';
+      document.getElementById('logoutBtn').onclick=async()=>{ await sb.auth.signOut(); };
+    } else {
+      area.innerHTML='<button class="tbtn acct-btn" id="acctBtn">Se connecter</button>';
+      document.getElementById('acctBtn').onclick=()=>window.openAuth();
+    }
+  };
+  window.refreshAuthUI();
+  sb.auth.getSession().then(({data})=>{ currentUser=data.session?data.session.user:null; window.refreshAuthUI(); });
+  sb.auth.onAuthStateChange((_e,session)=>{ currentUser=session?session.user:null; window.refreshAuthUI(); });
+})();
+</script>
+
 </body>
 </html>
