@@ -199,10 +199,115 @@
   .gnone{color:var(--ink-soft);font-style:italic;}
   body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.05;background-size:220px;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220' viewBox='0 0 220 220'%3E%3Cg fill='none' stroke='%23e0c483' stroke-width='1.1'%3E%3Ccircle cx='60' cy='64' r='7'/%3E%3Ccircle cx='74' cy='70' r='7'/%3E%3Ccircle cx='66' cy='80' r='7'/%3E%3Cpath d='M67 54 q4 -16 20 -20'/%3E%3Cpath d='M87 34 q16 2 13 18 q-16 -1 -13 -18'/%3E%3C/g%3E%3C/svg%3E");}
+
+  /* ===== v17 — coquille de navigation ===== */
+  .topbar{position:sticky;top:0;z-index:60;display:flex;align-items:center;justify-content:space-between;gap:22px;
+    padding:11px 26px;background:rgba(28,16,20,.93);backdrop-filter:blur(8px);border-bottom:1px solid rgba(201,162,75,.2);}
+  .brand{display:flex;align-items:center;gap:12px;cursor:pointer;}
+  .brand .logo{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,var(--wine),#5a1622);display:flex;align-items:center;justify-content:center;border:1px solid rgba(201,162,75,.3);flex:none;}
+  .brand .logo svg{width:23px;height:23px;}
+  .brand .bn{font-family:'Fraunces',serif;font-weight:600;font-size:17px;letter-spacing:.02em;display:block;line-height:1;color:var(--parch);}
+  .brand .bn b{color:var(--gold-soft);font-weight:600;}
+  .brand .bt{font-size:8px;letter-spacing:.32em;text-transform:uppercase;color:var(--gold-soft);opacity:.7;margin-top:3px;display:block;}
+  .spaces{display:flex;gap:3px;}
+  .spaces button{font-family:'Spectral',serif;font-size:14px;letter-spacing:.02em;color:var(--gold-soft);opacity:.62;background:none;border:none;padding:9px 15px;border-radius:9px;cursor:pointer;position:relative;transition:.18s;}
+  .spaces button:hover{opacity:1;}
+  .spaces button.on{opacity:1;}
+  .spaces button.on::after{content:"";position:absolute;left:15px;right:15px;bottom:2px;height:2px;background:var(--gold);border-radius:2px;}
+  .tright{display:flex;align-items:center;gap:12px;}
+  .appbody{display:flex;align-items:flex-start;position:relative;z-index:1;}
+  .sidebar{width:212px;flex:none;align-self:stretch;background:rgba(28,16,20,.55);border-right:1px solid rgba(201,162,75,.16);padding:22px 14px;display:none;min-height:calc(100vh - 62px);}
+  .appbody.cave-active .sidebar{display:block;}
+  .side-h{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold-soft);opacity:.65;padding:0 12px;margin-bottom:12px;}
+  .side-item{display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:10px;color:var(--parch);opacity:.72;font-size:14px;cursor:pointer;margin-bottom:2px;transition:.16s;}
+  .side-item:hover{background:rgba(201,162,75,.12);opacity:1;}
+  .side-item.on{background:rgba(201,162,75,.16);color:var(--gold-soft);opacity:1;font-weight:500;}
+  .side-item .ic{width:18px;text-align:center;}
+  .side-item.gold-item{color:var(--gold-soft);opacity:.95;}
+  .side-sep{height:1px;background:rgba(201,162,75,.16);margin:14px 8px;}
+  .appmain{flex:1;min-width:0;}
+  .space{display:none;}
+  .space.on{display:block;}
+  .csub{display:none;}
+  .csub.on{display:block;animation:fadeup .25s ease;}
+  @keyframes fadeup{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+  #space-cave,#space-sommelier,#space-decouvrir{max-width:1180px;margin:0 auto;padding:32px 30px 60px;}
+  .appmain .vtitle{font-family:'Fraunces',serif;font-weight:600;font-size:26px;color:var(--parch);margin:0 0 4px;}
+  .appmain .vtitle em{font-style:italic;color:var(--gold-soft);}
+  .appmain .vsub{color:var(--gold-soft);opacity:.72;font-size:14px;margin-bottom:24px;}
+  .placeholder{background:linear-gradient(160deg,rgba(255,255,255,.03),rgba(0,0,0,.18));border:1px solid rgba(201,162,75,.22);border-radius:16px;padding:30px;color:var(--parch);}
+  .placeholder p{opacity:.82;line-height:1.6;margin-bottom:14px;}
+  .cave-tools{display:flex;gap:10px;flex-wrap:wrap;}
+  @media(max-width:880px){.appbody.cave-active .sidebar{display:none;}}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
+<style>
+  /* ===== v18 — ajout & liste cave ===== */
+  .addcard{background:linear-gradient(160deg,rgba(255,255,255,.03),rgba(0,0,0,.18));border:1px solid rgba(201,162,75,.22);border-radius:16px;padding:24px;max-width:720px;}
+  .qform{display:grid;grid-template-columns:1fr 1fr;gap:15px;}
+  .qfield.qfull{grid-column:1/-1;position:relative;}
+  .qfield label{display:block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold-soft);opacity:.85;margin-bottom:6px;}
+  .qfield input,.qfield select{width:100%;background:rgba(0,0,0,.28);border:1px solid rgba(201,162,75,.22);border-radius:8px;padding:11px 13px;color:var(--parch);font-family:'Spectral',serif;font-size:14px;outline:none;}
+  .qfield input:focus,.qfield select:focus{border-color:rgba(201,162,75,.6);}
+  .ac{position:absolute;top:100%;left:0;right:0;z-index:30;background:#241620;border:1px solid rgba(201,162,75,.3);border-radius:8px;margin-top:4px;max-height:240px;overflow:auto;display:none;box-shadow:0 18px 40px -16px rgba(0,0,0,.7);}
+  .ac.on{display:block;}
+  .ac .aci{padding:10px 13px;cursor:pointer;font-size:13.5px;border-bottom:1px solid rgba(201,162,75,.1);color:var(--parch);}
+  .ac .aci:last-child{border-bottom:none;}
+  .ac .aci:hover,.ac .aci.hi{background:rgba(201,162,75,.14);}
+  .ac .aci small{color:var(--gold-soft);opacity:.75;margin-left:6px;}
+  .qsuggest{margin-top:14px;background:rgba(201,162,75,.08);border:1px dashed rgba(201,162,75,.4);border-radius:10px;padding:12px 14px;font-size:12.5px;color:var(--parch);opacity:.92;line-height:1.5;}
+  .qsuggest b{color:var(--gold-soft);}
+  .qactions{display:flex;align-items:center;gap:14px;margin-top:18px;}
+  .btn-q{font-family:'Spectral',serif;font-size:13px;letter-spacing:.05em;padding:11px 20px;border-radius:9px;cursor:pointer;border:1px solid rgba(201,162,75,.3);background:transparent;color:var(--gold-soft);}
+  .btn-q.gold{background:linear-gradient(135deg,#d9b65f,#bd923c);color:#241218;border:none;font-weight:600;}
+  .btn-q:disabled{opacity:.55;cursor:default;}
+  .qmsg{font-size:13px;}
+  .qmsg.ok{color:#9ccf9c;} .qmsg.err{color:#e8889a;}
+  .wines-cave{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:15px;margin-top:18px;}
+  .cwine{position:relative;background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(0,0,0,.14));border:1px solid rgba(201,162,75,.2);border-radius:13px;padding:15px 15px 14px;overflow:hidden;}
+  .cwine .acc{position:absolute;left:0;top:0;bottom:0;width:5px;}
+  .cwine .q{position:absolute;top:12px;right:12px;background:rgba(201,162,75,.16);color:var(--gold-soft);font-family:'Fraunces',serif;font-weight:600;font-size:11.5px;padding:2px 9px;border-radius:20px;}
+  .cwine .nm{font-family:'Fraunces',serif;font-weight:600;font-size:15.5px;line-height:1.2;margin:1px 0 2px;padding-right:36px;color:var(--parch);}
+  .cwine .dom{font-size:12px;color:var(--gold-soft);margin-bottom:8px;}
+  .cwine .meta{font-size:11.5px;color:var(--parch);opacity:.72;margin-bottom:10px;}
+  .cwine .foot{display:flex;align-items:center;justify-content:space-between;}
+  .cwine .price{font-family:'Fraunces',serif;font-weight:600;font-size:14px;color:var(--gold-soft);}
+  .cwine .del{font-size:11px;color:#e8889a;cursor:pointer;opacity:.55;background:none;border:none;font-family:'Spectral',serif;}
+  .cwine .del:hover{opacity:1;}
+  .muted2{color:var(--parch);opacity:.6;font-size:13px;margin-top:14px;}
+</style>
+<header class="topbar">
+  <div class="brand" onclick="showSpace('atlas')">
+    <span class="logo"><svg viewBox="0 0 48 48" fill="none"><g stroke="#e0c483" stroke-width="2"><circle cx="18" cy="27" r="5" fill="rgba(0,0,0,.2)"/><circle cx="29" cy="30" r="5" fill="rgba(0,0,0,.2)"/><circle cx="23" cy="38" r="5" fill="rgba(0,0,0,.2)"/><circle cx="24" cy="19" r="5" fill="rgba(0,0,0,.2)"/><path d="M24 14 q3 -8 11 -9" stroke-linecap="round"/></g></svg></span>
+    <span><span class="bn">Mappa <b>Vini</b> Terra</span><span class="bt">Atlas &amp; Cave</span></span>
+  </div>
+  <nav class="spaces" id="spaces">
+    <button class="on" data-space="atlas" onclick="showSpace('atlas',this)">Atlas</button>
+    <button data-space="cave" onclick="showSpace('cave',this)">Ma Cave</button>
+    <button data-space="sommelier" onclick="showSpace('sommelier',this)">Sommelier</button>
+    <button data-space="decouvrir" onclick="showSpace('decouvrir',this)">Découvrir</button>
+  </nav>
+  <div class="tright">
+    <div class="acct" id="acctArea"><button class="tbtn acct-btn" id="acctBtn">Se connecter</button></div>
+  </div>
+</header>
+<div class="appbody" id="appbody">
+  <aside class="sidebar" id="cavesidebar">
+    <div class="side-h">Ma Cave</div>
+    <div class="side-item on" data-sub="c-resume" onclick="showSub('c-resume',this)"><span class="ic">&#9719;</span>Résumé</div>
+    <div class="side-item" data-sub="c-carte" onclick="showSub('c-carte',this)"><span class="ic">&#9673;</span>Carte</div>
+    <div class="side-item" data-sub="c-liste" onclick="showSub('c-liste',this)"><span class="ic">&#9636;</span>Liste</div>
+    <div class="side-item" data-sub="c-emplacements" onclick="showSub('c-emplacements',this)"><span class="ic">&#9638;</span>Emplacements</div>
+    <div class="side-sep"></div>
+    <div class="side-item" data-sub="c-wishlist" onclick="showSub('c-wishlist',this)"><span class="ic">&#9825;</span>Wishlist</div>
+    <div class="side-item" data-sub="c-accords" onclick="showSub('c-accords',this)"><span class="ic">&#10022;</span>Accords</div>
+    <div class="side-sep"></div>
+    <div class="side-item gold-item" data-sub="c-ajout" onclick="showSub('c-ajout',this)"><span class="ic">&#65291;</span>Ajouter un vin</div>
+  </aside>
+  <main class="appmain">
+    <section class="space on" id="space-atlas">
 <div class="wrap">
   <header class="head">
     <p class="kicker">Atlas interactif &middot; navigation à plusieurs niveaux</p>
@@ -240,18 +345,7 @@
       <button class="tbtn gold" id="badgeBtn">Compteur cave</button>
     </div>
     <div class="tzone">
-      <div class="dd" id="dd-cave">
-        <button class="ddbtn wine" data-dd="cave">Ma cave <i class="caret">▾</i></button>
-        <div class="ddpanel">
-          <button class="caveact" id="addBtn">Ajouter un vin</button>
-          <button class="caveact" id="impBtn">Importer</button>
-          <button class="caveact" id="expBtn">Exporter</button>
-        </div>
-      </div>
-      <button class="tbtn gold" id="dashBtn">Tableau de bord</button>
       <button class="tbtn gold" id="glossBtn">Glossaire</button>
-      <div class="acct" id="acctArea"><button class="tbtn acct-btn" id="acctBtn">Se connecter</button></div>
-      <input type="file" id="impFile" accept=".csv,.json,application/json,text/csv" style="display:none">
     </div>
   </div>
   <div class="layout" id="layout">
@@ -263,6 +357,56 @@
     <aside class="panel" id="panel"></aside>
   </div>
   <p class="footnote">Superficies &amp; productions : <b>ordres de grandeur</b> annuels. Millésimes : généralisations par sous-région, le talent du vigneron prime. Fond <b>IGN/INSEE</b>, zones viticoles indicatives. « Ma cave » vit en mémoire — <b>Exporter</b> pour conserver, <b>Importer</b> pour recharger.</p>
+    </div>
+    </section>
+
+    <section class="space" id="space-cave">
+      <div class="csub on" id="c-resume">
+        <h2 class="vtitle">Votre cave en un <em>coup d'œil</em></h2>
+        <p class="vsub">Le tableau de bord complet (statistiques, valeur, mini-carte) sera branché sur votre compte dans une prochaine version.</p>
+        <div class="placeholder">
+          <p>En attendant, vous pouvez ouvrir le tableau de bord de la version actuelle :</p>
+          <button class="tbtn gold" id="dashBtn">Tableau de bord (version actuelle)</button>
+        </div>
+      </div>
+      <div class="csub" id="c-carte"><h2 class="vtitle">Carte de <em>ma cave</em></h2><p class="vsub">À venir.</p><div class="placeholder"><p>La carte filtrée sur vos bouteilles, avec navigation dans les sous-régions, arrivera prochainement.</p></div></div>
+      <div class="csub" id="c-liste"><div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;"><div><h2 class="vtitle">Tous mes <em>vins</em></h2><p class="vsub">Votre cave, enregistrée sur votre compte.</p></div><button class="btn-q gold" onclick="showSub('c-ajout',document.querySelector('#cavesidebar .gold-item'))">&#65291; Ajouter</button></div><div id="listGate" class="placeholder" style="display:none"><p>Connectez-vous pour voir votre cave.</p></div><div id="caveLoading" class="muted2" style="display:none">Chargement de votre cave&hellip;</div><div id="caveEmpty" class="placeholder" style="display:none"><p>Aucun vin pour l'instant. Ajoutez votre première bouteille pour démarrer votre cave.</p></div><div id="caveList" class="wines-cave"></div></div>
+      <div class="csub" id="c-emplacements"><h2 class="vtitle">Mes <em>emplacements</em></h2><p class="vsub">À venir.</p><div class="placeholder"><p>La gestion des caves et casiers (renommables) arrivera prochainement.</p></div></div>
+      <div class="csub" id="c-wishlist"><h2 class="vtitle">Ma <em>wishlist</em></h2><p class="vsub">À venir.</p><div class="placeholder"><p>Vos envies d'achat, avec transfert vers la cave, arriveront prochainement.</p></div></div>
+      <div class="csub" id="c-accords"><h2 class="vtitle">Accords <em>mets &amp; vins</em></h2><p class="vsub">À venir.</p><div class="placeholder"><p>Les accords (dans les deux sens) arriveront prochainement.</p></div></div>
+      <div class="csub" id="c-ajout">
+        <h2 class="vtitle">Ajouter une <em>bouteille</em></h2>
+        <p class="vsub">Mode rapide. Le nom de l'appellation pré-remplit la région et les cépages depuis l'atlas.</p>
+        <div id="addGate" class="placeholder" style="display:none"><p>Connectez-vous pour ajouter des vins à votre cave.</p><button class="btn-q gold" onclick="window.openAuth&&window.openAuth()">Se connecter</button></div>
+        <div class="addcard" id="addCard">
+          <div class="qform">
+            <div class="qfield qfull"><label>Nom / appellation</label><input id="qNom" type="text" autocomplete="off" placeholder="Ex. Chablis, Côte-Rôtie, Pauillac…"><div class="ac" id="qAc"></div></div>
+            <div class="qfield"><label>Domaine (optionnel)</label><input id="qDom" type="text" placeholder="Ex. Jamet"></div>
+            <div class="qfield"><label>Couleur</label><select id="qCol"><option value="rouge">Rouge</option><option value="blanc">Blanc</option><option value="rosé">Rosé</option><option value="effervescent">Effervescent</option><option value="doux">Doux / Liquoreux</option></select></div>
+            <div class="qfield"><label>Millésime</label><input id="qMil" type="number" placeholder="2020"></div>
+            <div class="qfield"><label>Quantité</label><input id="qQte" type="number" value="1" min="1"></div>
+            <div class="qfield"><label>Prix d'achat (€)</label><input id="qPrix" type="number" step="0.01" placeholder="—"></div>
+          </div>
+          <div class="qsuggest" id="qSuggest" style="display:none"></div>
+          <div class="qactions"><button class="btn-q gold" id="qSave">Ajouter à ma cave</button><span class="qmsg" id="qMsg"></span></div>
+        </div>
+        <div style="display:none"><button id="addBtn"></button><button id="impBtn"></button><button id="expBtn"></button><input type="file" id="impFile"></div>
+      </div>
+    </section>
+
+    <section class="space" id="space-sommelier">
+      <h2 class="vtitle">Votre <em>sommelier</em> personnel</h2>
+      <p class="vsub">Un assistant qui connaîtra votre cave et vos goûts pour vous conseiller.</p>
+      <div class="placeholder"><p>Cet espace sera développé une fois la cave en place. Il s'appuiera sur votre profil viticole et le contenu de votre cave.</p></div>
+    </section>
+
+    <section class="space" id="space-decouvrir">
+      <h2 class="vtitle"><em>Découvrir</em></h2>
+      <p class="vsub">Articles, routes des vins, quiz, fiches producteurs…</p>
+      <div class="placeholder"><p>Espace réservé pour de futures fonctionnalités éditoriales et ludiques.</p></div>
+    </section>
+
+  </main>
 </div>
 
 <div class="overlay" id="overlay">
@@ -973,6 +1117,22 @@ function renderGloss(q){
 }
 </script>
 
+<script>
+function showSpace(space, btn){
+  document.querySelectorAll('.space').forEach(function(p){p.classList.remove('on');});
+  var el=document.getElementById('space-'+space); if(el)el.classList.add('on');
+  document.querySelectorAll('.spaces button').forEach(function(b){b.classList.toggle('on', b.getAttribute('data-space')===space);});
+  document.getElementById('appbody').classList.toggle('cave-active', space==='cave');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function showSub(sub, el){
+  document.querySelectorAll('#space-cave .csub').forEach(function(p){p.classList.remove('on');});
+  var t=document.getElementById(sub); if(t)t.classList.add('on');
+  document.querySelectorAll('#cavesidebar .side-item').forEach(function(i){i.classList.remove('on');});
+  if(el)el.classList.add('on');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+</script>
 <style>
 #authModal{display:none;position:fixed;inset:0;z-index:9999;background:rgba(12,6,9,.72);align-items:center;justify-content:center;font-family:'Spectral',serif;}
 .auth-card{width:min(420px,92vw);background:linear-gradient(180deg,#23121a,#1a0d13);border:1px solid rgba(201,162,75,.3);border-radius:16px;padding:30px 28px;box-shadow:0 30px 80px -20px rgba(0,0,0,.8);position:relative;}
@@ -1085,6 +1245,172 @@ function renderGloss(q){
   window.refreshAuthUI();
   sb.auth.getSession().then(({data})=>{ currentUser=data.session?data.session.user:null; window.refreshAuthUI(); });
   sb.auth.onAuthStateChange((_e,session)=>{ currentUser=session?session.user:null; window.refreshAuthUI(); });
+})();
+</script>
+
+<script>
+(function(){
+  if(!window.sb){ return; }
+  var me=null, CEPAGE_MAP=null, APP_INDEX=null, sel=null, acItems=[], acHi=-1;
+  var COLACC={rouge:'#b0455a',blanc:'#cdb86a','rosé':'#d98a9a',effervescent:'#cfc486',doux:'#e0a94b'};
+  var $=function(id){return document.getElementById(id);};
+
+  function guessColor(types){
+    var t=(types||[]).join(' ').toLowerCase();
+    if(t.indexOf('liquoreux')>=0||t.indexOf('doux')>=0||t.indexOf('vdn')>=0) return 'doux';
+    if(t.indexOf('effervescent')>=0||t.indexOf('bulles')>=0) return 'effervescent';
+    if(t.indexOf('rouge')>=0) return 'rouge';
+    if(t.indexOf('rosé')>=0||t.indexOf('rose')>=0) return 'rosé';
+    if(t.indexOf('blanc')>=0) return 'blanc';
+    return 'rouge';
+  }
+  function buildIndex(){
+    if(APP_INDEX) return APP_INDEX;
+    APP_INDEX={};
+    try{
+      DATA.forEach(function(r){
+        var rc=guessColor(r.types);
+        (r.aoc||[]).forEach(function(a){ add(a,r.name,'',rc,r.cepages||[]); });
+        (r.subs||[]).forEach(function(su){
+          var sc=guessColor(su.types);
+          (su.aoc||[]).forEach(function(a){ add(a,r.name,su.n,sc,(su.cepages||[]).concat(su.cepagesRares||[])); });
+        });
+      });
+    }catch(e){ console.warn('index appellations',e); }
+    return APP_INDEX;
+    function add(a,region,sub,couleur,ceps){
+      var k=a.toLowerCase();
+      if(!APP_INDEX[k]) APP_INDEX[k]={appellation:a,region:region,sub:sub,couleur:couleur,cepages:(ceps||[]).slice(0,6)};
+    }
+  }
+  function norm(x){return (x||'').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');}
+
+  // ---- autocomplete ----
+  function onType(){
+    var q=norm($('qNom').value.trim()); var box=$('qAc');
+    sel=null; hideSuggest();
+    if(q.length<2){ box.classList.remove('on'); box.innerHTML=''; return; }
+    var idx=buildIndex(), keys=Object.keys(idx), starts=[], incl=[];
+    keys.forEach(function(k){ var nk=norm(k); if(nk.indexOf(q)===0) starts.push(idx[k]); else if(nk.indexOf(q)>=0) incl.push(idx[k]); });
+    acItems=starts.concat(incl).slice(0,8); acHi=-1;
+    if(!acItems.length){ box.classList.remove('on'); box.innerHTML=''; return; }
+    box.innerHTML=acItems.map(function(it,i){ return '<div class="aci" data-i="'+i+'">'+it.appellation+'<small>'+it.region+(it.sub?' · '+it.sub:'')+'</small></div>'; }).join('');
+    box.classList.add('on');
+    Array.prototype.forEach.call(box.querySelectorAll('.aci'),function(el){ el.onclick=function(){ pick(parseInt(el.getAttribute('data-i'))); }; });
+  }
+  function pick(i){
+    var it=acItems[i]; if(!it)return; sel=it;
+    $('qNom').value=it.appellation;
+    if(it.couleur) $('qCol').value=it.couleur;
+    $('qAc').classList.remove('on');
+    showSuggest(it);
+  }
+  function showSuggest(it){
+    var s2=$('qSuggest');
+    s2.innerHTML='<b>\u2728 Pr\u00e9-rempli depuis l\'atlas :</b> r\u00e9gion <b>'+it.region+'</b>'+(it.sub?', sous-r\u00e9gion <b>'+it.sub+'</b>':'')+', couleur <b>'+it.couleur+'</b>'+(it.cepages.length?', c\u00e9pages <b>'+it.cepages.join(', ')+'</b>':'')+'. <span style="opacity:.8">Vous pouvez tout corriger.</span>';
+    s2.style.display='block';
+  }
+  function hideSuggest(){ var s2=$('qSuggest'); if(s2){s2.style.display='none';} }
+  function onKey(e){
+    var box=$('qAc'); if(!box.classList.contains('on'))return;
+    if(e.key==='ArrowDown'){e.preventDefault();acHi=Math.min(acHi+1,acItems.length-1);hi();}
+    else if(e.key==='ArrowUp'){e.preventDefault();acHi=Math.max(acHi-1,0);hi();}
+    else if(e.key==='Enter'){ if(acHi>=0){e.preventDefault();pick(acHi);} }
+    else if(e.key==='Escape'){ box.classList.remove('on'); }
+  }
+  function hi(){ var els=$('qAc').querySelectorAll('.aci'); Array.prototype.forEach.call(els,function(el,i){ el.classList.toggle('hi',i===acHi); }); }
+
+  // ---- save ----
+  async function ensureCepageMap(){
+    if(CEPAGE_MAP) return CEPAGE_MAP;
+    var r=await sb.from('cepages').select('id,nom'); CEPAGE_MAP={};
+    if(r.data) r.data.forEach(function(c){ CEPAGE_MAP[c.nom]=c.id; });
+    return CEPAGE_MAP;
+  }
+  function msg(t,type){ var m=$('qMsg'); m.textContent=t; m.className='qmsg'+(type?(' '+type):''); }
+  async function save(){
+    if(!me){ msg('Connectez-vous d\'abord.','err'); return; }
+    var nom=$('qNom').value.trim();
+    if(!nom){ msg('Indiquez au moins un nom.','err'); return; }
+    var btn=$('qSave'); btn.disabled=true; msg('Enregistrement\u2026');
+    try{
+      var wine={ user_id:me.id, nom:nom, domaine:($('qDom').value.trim()||null), couleur:$('qCol').value,
+        region: sel?sel.region:null, sous_region:(sel&&sel.sub)?sel.sub:null, appellation: sel?sel.appellation:null, pays:'France' };
+      var w=await sb.from('wines').insert(wine).select().single();
+      if(w.error) throw w.error;
+      var bottle={ wine_id:w.data.id, millesime:($('qMil').value?parseInt($('qMil').value):null),
+        quantite:(parseInt($('qQte').value)||1), prix_achat:($('qPrix').value?parseFloat($('qPrix').value):null), devise:'EUR', statut:'en_cave' };
+      var b=await sb.from('bottles').insert(bottle);
+      if(b.error) throw b.error;
+      if(sel && sel.cepages && sel.cepages.length){
+        await ensureCepageMap();
+        var rows=[]; sel.cepages.forEach(function(cn){ var id=CEPAGE_MAP[cn]; if(id) rows.push({wine_id:w.data.id,cepage_id:id}); });
+        if(rows.length){ var c=await sb.from('wine_cepages').insert(rows); if(c.error) console.warn('cepages',c.error); }
+      }
+      msg('Ajout\u00e9 \u2713','ok');
+      $('qNom').value='';$('qDom').value='';$('qMil').value='';$('qQte').value='1';$('qPrix').value=''; sel=null; hideSuggest();
+      loadCave();
+      setTimeout(function(){ msg(''); },2500);
+    }catch(err){ console.error(err); msg((err&&err.message)||'Erreur lors de l\'ajout.','err'); }
+    finally{ btn.disabled=false; }
+  }
+
+  // ---- list ----
+  async function loadCave(){
+    if(!me){ return; }
+    var list=$('caveList'), ld=$('caveLoading'), em=$('caveEmpty');
+    list.innerHTML=''; em.style.display='none'; ld.style.display='block';
+    var r=await sb.from('wines').select('id,nom,domaine,region,sous_region,appellation,couleur,bottles(millesime,quantite,prix_achat)').eq('user_id',me.id).order('created_at',{ascending:false});
+    ld.style.display='none';
+    if(r.error){ list.innerHTML='<p class="muted2">Erreur de chargement.</p>'; console.error(r.error); return; }
+    var rows=r.data||[];
+    if(!rows.length){ em.style.display='block'; return; }
+    list.innerHTML=rows.map(card).join('');
+    Array.prototype.forEach.call(list.querySelectorAll('.del'),function(el){ el.onclick=function(){ delWine(el.getAttribute('data-id')); }; });
+  }
+  function card(w){
+    var bs=w.bottles||[]; var qty=0, prix=null, mills=[];
+    bs.forEach(function(b){ qty+=(b.quantite||0); if(b.millesime)mills.push(b.millesime); if(prix==null&&b.prix_achat!=null)prix=b.prix_achat; });
+    var col=COLACC[w.couleur]||'#b0455a';
+    var meta=[w.region,w.appellation].filter(Boolean).join(' · ')||'\u2014';
+    var millstr=mills.length?mills.sort().join(', '):'sans mill\u00e9sime';
+    return '<div class="cwine"><span class="acc" style="background:'+col+'"></span>'+
+      (qty?'<span class="q">\u00d7'+qty+'</span>':'')+
+      '<div class="nm">'+esc(w.nom)+'</div>'+
+      '<div class="dom">'+(w.domaine?esc(w.domaine)+' \u00b7 ':'')+millstr+'</div>'+
+      '<div class="meta">'+esc(meta)+'</div>'+
+      '<div class="foot"><span class="price">'+(prix!=null?(prix+' \u20ac'):'')+'</span><button class="del" data-id="'+w.id+'">supprimer</button></div></div>';
+  }
+  function esc(x){ return (x||'').toString().replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+  async function delWine(id){
+    if(!confirm('Supprimer ce vin de votre cave ?'))return;
+    var r=await sb.from('wines').delete().eq('id',id);
+    if(r.error){ alert('Suppression impossible.'); console.error(r.error); return; }
+    loadCave();
+  }
+
+  // ---- auth sync ----
+  function syncAuth(){
+    var logged=!!me;
+    if($('addGate')) $('addGate').style.display=logged?'none':'block';
+    if($('addCard')) $('addCard').style.display=logged?'block':'none';
+    if($('listGate')) $('listGate').style.display=logged?'none':'block';
+    if($('caveList')) $('caveList').style.display=logged?'grid':'none';
+    if(!logged && $('caveEmpty')) $('caveEmpty').style.display='none';
+  }
+  function setUser(u){ me=u; syncAuth(); if(u) loadCave(); else { if($('caveList'))$('caveList').innerHTML=''; } }
+
+  // wire
+  document.addEventListener('DOMContentLoaded',init); init();
+  function init(){
+    var n=$('qNom'); if(!n) return;
+    n.addEventListener('input',onType); n.addEventListener('keydown',onKey);
+    n.addEventListener('blur',function(){ setTimeout(function(){ $('qAc').classList.remove('on'); },150); });
+    $('qSave').addEventListener('click',save);
+    syncAuth();
+  }
+  sb.auth.getSession().then(function(res){ setUser(res.data.session?res.data.session.user:null); });
+  sb.auth.onAuthStateChange(function(_e,session){ setUser(session?session.user:null); });
 })();
 </script>
 
