@@ -1250,7 +1250,7 @@ function showSub(sub, el){
 
 <script>
 (function(){
-  if(!window.sb){ return; }
+  if(typeof sb==="undefined" || !sb){ console.warn("Supabase indisponible pour la cave"); return; }
   var me=null, CEPAGE_MAP=null, APP_INDEX=null, sel=null, acItems=[], acHi=-1;
   var COLACC={rouge:'#b0455a',blanc:'#cdb86a','rosé':'#d98a9a',effervescent:'#cfc486',doux:'#e0a94b'};
   var $=function(id){return document.getElementById(id);};
