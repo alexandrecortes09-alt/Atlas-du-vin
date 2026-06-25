@@ -278,6 +278,24 @@
   .cwine .del:hover{opacity:1;}
   .muted2{color:var(--parch);opacity:.6;font-size:13px;margin-top:14px;}
 </style>
+<style>
+  /* ===== v21 — formulaire d'ajout (rapide + complet) ===== */
+  .modebar{display:inline-flex;background:rgba(0,0,0,.25);border:1px solid rgba(201,162,75,.2);border-radius:10px;padding:4px;margin-bottom:18px;}
+  .modebar button{padding:8px 18px;border:none;background:none;color:var(--parch);opacity:.6;font-family:'Spectral',serif;font-size:13px;border-radius:7px;cursor:pointer;}
+  .modebar button.on{background:rgba(201,162,75,.16);color:var(--gold-soft);opacity:1;}
+  .complet-only{border-top:1px solid rgba(201,162,75,.16);margin-top:18px;padding-top:6px;}
+  .taginput{display:flex;flex-wrap:wrap;gap:6px;align-items:center;background:rgba(0,0,0,.28);border:1px solid rgba(201,162,75,.22);border-radius:8px;padding:7px 9px;}
+  .taginput:focus-within{border-color:rgba(201,162,75,.6);}
+  .taginput input{flex:1;min-width:130px;background:none;border:none;outline:none;color:var(--parch);font-family:'Spectral',serif;font-size:14px;padding:4px;}
+  .tag-chip{display:inline-flex;align-items:center;gap:7px;background:rgba(201,162,75,.16);color:var(--gold-soft);border-radius:16px;padding:4px 11px;font-size:12.5px;}
+  .tag-chip b{cursor:pointer;opacity:.65;font-weight:400;}
+  .tag-chip b:hover{opacity:1;}
+  .stylechips{display:flex;flex-wrap:wrap;gap:8px;}
+  .style-chip{background:rgba(0,0,0,.22);border:1px solid rgba(201,162,75,.25);color:var(--parch);opacity:.75;border-radius:20px;padding:6px 13px;font-size:12.5px;cursor:pointer;user-select:none;}
+  .style-chip.on{background:rgba(201,162,75,.18);color:var(--gold-soft);opacity:1;border-color:var(--gold);}
+  .qsuggest .scep{display:inline-block;background:rgba(201,162,75,.12);border:1px solid rgba(201,162,75,.3);color:var(--gold-soft);border-radius:16px;padding:3px 10px;font-size:12px;margin:3px 4px 0 0;cursor:pointer;}
+  .qsuggest .scep:hover{background:rgba(201,162,75,.22);}
+</style>
 <header class="topbar">
   <div class="brand" onclick="showSpace('atlas')">
     <span class="logo"><svg viewBox="0 0 48 48" fill="none"><g stroke="#e0c483" stroke-width="2"><circle cx="18" cy="27" r="5" fill="rgba(0,0,0,.2)"/><circle cx="29" cy="30" r="5" fill="rgba(0,0,0,.2)"/><circle cx="23" cy="38" r="5" fill="rgba(0,0,0,.2)"/><circle cx="24" cy="19" r="5" fill="rgba(0,0,0,.2)"/><path d="M24 14 q3 -8 11 -9" stroke-linecap="round"/></g></svg></span>
@@ -386,19 +404,33 @@
       <div class="csub" id="c-accords"><h2 class="vtitle">Accords <em>mets &amp; vins</em></h2><p class="vsub">À venir.</p><div class="placeholder"><p>Les accords (dans les deux sens) arriveront prochainement.</p></div></div>
       <div class="csub" id="c-ajout">
         <h2 class="vtitle">Ajouter une <em>bouteille</em></h2>
-        <p class="vsub">Mode rapide. Le nom de l'appellation pré-remplit la région et les cépages depuis l'atlas.</p>
+        <p class="vsub">L'appellation pré-remplit la région. La couleur et les cépages restent à votre main.</p>
         <div id="addGate" class="placeholder" style="display:none"><p>Connectez-vous pour ajouter des vins à votre cave.</p><button class="btn-q gold" onclick="window.openAuth&&window.openAuth()">Se connecter</button></div>
         <div class="addcard" id="addCard">
+          <div class="modebar"><button id="mRapide" class="on" type="button">Mode rapide</button><button id="mComplet" type="button">Mode complet</button></div>
           <div class="qform">
-            <div class="qfield qfull"><label>Nom / appellation</label><input id="qNom" type="text" autocomplete="off" placeholder="Ex. Chablis, Côte-Rôtie, Pauillac…"><div class="ac" id="qAc"></div></div>
-            <div class="qfield"><label>Domaine (optionnel)</label><input id="qDom" type="text" placeholder="Ex. Jamet"></div>
-            <div class="qfield"><label>Couleur</label><select id="qCol"><option value="rouge">Rouge</option><option value="blanc">Blanc</option><option value="rosé">Rosé</option><option value="effervescent">Effervescent</option><option value="doux">Doux / Liquoreux</option></select></div>
+            <div class="qfield qfull"><label>Appellation (AOC/AOP)</label><input id="qApp" type="text" autocomplete="off" placeholder="Ex. Chablis, Côte-Rôtie, Pauillac…"><div class="ac" id="qAc"></div><div class="qsuggest" id="qSuggest" style="display:none"></div></div>
+            <div class="qfield"><label>Cuvée</label><input id="qCuv" type="text" placeholder="Ex. Les Glorieuses"></div>
+            <div class="qfield"><label>Domaine</label><input id="qDom" type="text" placeholder="Ex. Jamet"></div>
+            <div class="qfield"><label>Couleur</label><select id="qCol"><option value="">—</option><option value="rouge">Rouge</option><option value="blanc">Blanc</option><option value="rosé">Rosé</option><option value="effervescent">Effervescent</option><option value="doux">Doux / Liquoreux</option></select></div>
+            <div class="qfield qfull"><label>Cépage(s)</label><div class="taginput" id="qCepBox"><span class="tags" id="qCepTags"></span><input id="qCep" type="text" autocomplete="off" placeholder="Ajouter un cépage…"></div><div class="ac" id="qCepAc"></div></div>
             <div class="qfield"><label>Millésime</label><input id="qMil" type="number" placeholder="2020"></div>
+            <div class="qfield"><label>Format</label><select id="qFmt"><option value="Bouteille (75cl)">Bouteille (75cl)</option><option value="Demi (37,5cl)">Demi (37,5cl)</option><option value="Magnum (1,5L)">Magnum (1,5L)</option><option value="Jéroboam (3L)">Jéroboam (3L)</option></select></div>
             <div class="qfield"><label>Quantité</label><input id="qQte" type="number" value="1" min="1"></div>
             <div class="qfield"><label>Prix d'achat (€)</label><input id="qPrix" type="number" step="0.01" placeholder="—"></div>
+            <div class="qfield"><label>Date d'achat</label><input id="qDate" type="date"></div>
           </div>
-          <div class="qsuggest" id="qSuggest" style="display:none"></div>
-          <div class="qactions"><button class="btn-q gold" id="qSave">Ajouter à ma cave</button><span class="qmsg" id="qMsg"></span></div>
+          <div class="complet-only" id="completFields" style="display:none">
+            <div class="qfield qfull" style="margin-bottom:15px"><label>Style</label><div class="stylechips" id="qStyle"></div></div>
+            <div class="qform">
+              <div class="qfield"><label>Niveau de garde</label><select id="qGarde"><option value="">—</option><option>À boire maintenant</option><option>Garde courte (2–5 ans)</option><option>Garde moyenne (5–10 ans)</option><option>Grande garde (10 ans+)</option></select></div>
+              <div class="qfield"><label>Note perso /100</label><input id="qNote" type="number" min="0" max="100"></div>
+              <div class="qfield"><label>Apogée — début</label><input id="qAd" type="number" placeholder="2026"></div>
+              <div class="qfield"><label>Apogée — fin</label><input id="qAf" type="number" placeholder="2035"></div>
+              <div class="qfield qfull"><label>Commentaire</label><input id="qCom" type="text" placeholder="Notes de dégustation, contexte…"></div>
+            </div>
+          </div>
+          <div class="qactions"><button class="btn-q gold" id="qSave">Ajouter à ma cave</button><button class="btn-q" id="qReset" type="button">Réinitialiser</button><span class="qmsg" id="qMsg"></span></div>
         </div>
         <div style="display:none"><button id="addBtn"></button><button id="impBtn"></button><button id="expBtn"></button><input type="file" id="impFile"></div>
       </div>
@@ -1323,30 +1355,37 @@ function showSub(sub, el){
   }
   function norm(x){return (x||'').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');}
 
-  // ---- autocomplete ----
+  // ---- autocomplete appellation (région/sous-région, sans imposer la couleur) ----
+  var selCepages=[], CEP_LIST=null, cepItems=[], cepHi=-1;
+  var STYLE_LIST=['Léger','Fruité','Puissant','Boisé','Minéral','Tannique','Vif / Acide','Doux','Complexe'];
+  function msg(t,type){ var m=$('qMsg'); if(m){ m.textContent=t; m.className='qmsg'+(type?(' '+type):''); } }
   function onType(){
-    var q=norm($('qNom').value.trim()); var box=$('qAc');
+    var q=norm($('qApp').value.trim()); var box=$('qAc');
     sel=null; hideSuggest();
     if(q.length<2){ box.classList.remove('on'); box.innerHTML=''; return; }
     var idx=buildIndex(), keys=Object.keys(idx), starts=[], incl=[];
     keys.forEach(function(k){ var nk=norm(k); if(nk.indexOf(q)===0) starts.push(idx[k]); else if(nk.indexOf(q)>=0) incl.push(idx[k]); });
     acItems=starts.concat(incl).slice(0,8); acHi=-1;
     if(!acItems.length){ box.classList.remove('on'); box.innerHTML=''; return; }
-    box.innerHTML=acItems.map(function(it,i){ return '<div class="aci" data-i="'+i+'">'+it.appellation+'<small>'+it.region+(it.sub?' · '+it.sub:'')+'</small></div>'; }).join('');
+    box.innerHTML=acItems.map(function(it,i){ return '<div class="aci" data-i="'+i+'">'+esc(it.appellation)+'<small>'+esc(it.region)+(it.sub?' · '+esc(it.sub):'')+'</small></div>'; }).join('');
     box.classList.add('on');
     Array.prototype.forEach.call(box.querySelectorAll('.aci'),function(el){ el.onclick=function(){ pick(parseInt(el.getAttribute('data-i'))); }; });
   }
   function pick(i){
     var it=acItems[i]; if(!it)return; sel=it;
-    $('qNom').value=it.appellation;
-    if(it.couleur) $('qCol').value=it.couleur;
+    $('qApp').value=it.appellation;
     $('qAc').classList.remove('on');
     showSuggest(it);
   }
   function showSuggest(it){
     var s2=$('qSuggest');
-    s2.innerHTML='<b>\u2728 Pr\u00e9-rempli depuis l\'atlas :</b> r\u00e9gion <b>'+it.region+'</b>'+(it.sub?', sous-r\u00e9gion <b>'+it.sub+'</b>':'')+', couleur <b>'+it.couleur+'</b>'+(it.cepages.length?', c\u00e9pages <b>'+it.cepages.join(', ')+'</b>':'')+'. <span style="opacity:.8">Vous pouvez tout corriger.</span>';
-    s2.style.display='block';
+    var html='<b>D\'après l\'atlas</b> — région <b>'+esc(it.region)+'</b>'+(it.sub?', sous-région <b>'+esc(it.sub)+'</b>':'')+'.';
+    if(it.cepages && it.cepages.length){
+      html+='<div style="margin-top:7px">Cépages typiques (cliquez pour ajouter) : '+it.cepages.map(function(c){ return '<span class="scep" data-cep="'+esc(c)+'">'+esc(c)+'</span>'; }).join('')+'</div>';
+    }
+    html+='<div style="margin-top:7px;opacity:.75">La couleur et les cépages exacts dépendent de la cuvée — à vous de préciser.</div>';
+    s2.innerHTML=html; s2.style.display='block';
+    Array.prototype.forEach.call(s2.querySelectorAll('.scep'),function(el){ el.onclick=function(){ var n=el.getAttribute('data-cep'); ensureCepList().then(function(){ var canon=resolveCep(n); if(canon) addCep(canon); }); }; });
   }
   function hideSuggest(){ var s2=$('qSuggest'); if(s2){s2.style.display='none';} }
   function onKey(e){
@@ -1358,39 +1397,86 @@ function showSub(sub, el){
   }
   function hi(){ var els=$('qAc').querySelectorAll('.aci'); Array.prototype.forEach.call(els,function(el,i){ el.classList.toggle('hi',i===acHi); }); }
 
-  // ---- save ----
-  async function ensureCepageMap(){
-    if(CEPAGE_MAP) return CEPAGE_MAP;
-    var r=await sb.from('cepages').select('id,nom'); CEPAGE_MAP={};
-    if(r.data) r.data.forEach(function(c){ CEPAGE_MAP[c.nom]=c.id; });
-    return CEPAGE_MAP;
+  // ---- cépages (référentiel Supabase, saisie en étiquettes) ----
+  async function ensureCepList(){
+    if(CEP_LIST) return;
+    var r=await sb.from('cepages').select('id,nom').order('nom');
+    CEP_LIST=[]; CEPAGE_MAP={};
+    if(r.data) r.data.forEach(function(c){ CEP_LIST.push(c.nom); CEPAGE_MAP[c.nom]=c.id; });
   }
-  function msg(t,type){ var m=$('qMsg'); m.textContent=t; m.className='qmsg'+(type?(' '+type):''); }
+  function resolveCep(n){ if(!CEP_LIST) return null; var nn=norm(n); for(var i=0;i<CEP_LIST.length;i++){ if(norm(CEP_LIST[i])===nn) return CEP_LIST[i]; } return null; }
+  function onCepType(){
+    var box=$('qCepAc'); var q=norm($('qCep').value.trim());
+    if(!CEP_LIST){ ensureCepList().then(onCepType); return; }
+    if(q.length<1){ box.classList.remove('on'); box.innerHTML=''; cepItems=[]; return; }
+    var st=[], inc=[];
+    CEP_LIST.forEach(function(n){ if(selCepages.indexOf(n)>=0)return; var nn=norm(n); if(nn.indexOf(q)===0)st.push(n); else if(nn.indexOf(q)>=0)inc.push(n); });
+    cepItems=st.concat(inc).slice(0,8); cepHi=-1;
+    if(!cepItems.length){ box.classList.remove('on'); box.innerHTML=''; return; }
+    box.innerHTML=cepItems.map(function(n,i){ return '<div class="aci" data-i="'+i+'">'+esc(n)+'</div>'; }).join('');
+    box.classList.add('on');
+    Array.prototype.forEach.call(box.querySelectorAll('.aci'),function(el){ el.onclick=function(){ pickCep(parseInt(el.getAttribute('data-i'))); }; });
+  }
+  function pickCep(i){ var n=cepItems[i]; if(!n)return; addCep(n); $('qCep').value=''; $('qCepAc').classList.remove('on'); $('qCep').focus(); }
+  function addCep(n){ if(selCepages.indexOf(n)<0){ selCepages.push(n); renderCepTags(); } }
+  function removeCep(n){ selCepages=selCepages.filter(function(x){return x!==n;}); renderCepTags(); }
+  function renderCepTags(){ var t=$('qCepTags'); if(!t)return; t.innerHTML=selCepages.map(function(n){ return '<span class="tag-chip">'+esc(n)+'<b data-cep="'+esc(n)+'">×</b></span>'; }).join(''); Array.prototype.forEach.call(t.querySelectorAll('b[data-cep]'),function(el){ el.onclick=function(){ removeCep(el.getAttribute('data-cep')); }; }); }
+  function onCepKey(e){
+    var box=$('qCepAc');
+    if(e.key==='Enter'){ e.preventDefault(); if(cepItems.length) pickCep(cepHi>=0?cepHi:0); }
+    else if(e.key==='ArrowDown'){ e.preventDefault(); cepHi=Math.min(cepHi+1,cepItems.length-1); cepHiUpd(); }
+    else if(e.key==='ArrowUp'){ e.preventDefault(); cepHi=Math.max(cepHi-1,0); cepHiUpd(); }
+    else if(e.key==='Backspace' && !$('qCep').value && selCepages.length){ removeCep(selCepages[selCepages.length-1]); }
+    else if(e.key==='Escape'){ box.classList.remove('on'); }
+  }
+  function cepHiUpd(){ var els=$('qCepAc').querySelectorAll('.aci'); Array.prototype.forEach.call(els,function(el,i){ el.classList.toggle('hi',i===cepHi); }); }
+
+  // ---- style (multi-sélection) ----
+  function renderStyleChips(){ var c=$('qStyle'); if(!c)return; c.innerHTML=STYLE_LIST.map(function(x){ return '<span class="style-chip" data-style="'+esc(x)+'">'+esc(x)+'</span>'; }).join(''); Array.prototype.forEach.call(c.querySelectorAll('.style-chip'),function(el){ el.onclick=function(){ el.classList.toggle('on'); }; }); }
+  function readStyle(){ var out=[]; var c=$('qStyle'); if(c) Array.prototype.forEach.call(c.querySelectorAll('.style-chip.on'),function(el){ out.push(el.getAttribute('data-style')); }); return out; }
+
+  // ---- mode rapide / complet ----
+  function showMode(m){ var r=$('mRapide'),c=$('mComplet'),f=$('completFields'); if(!r)return; var comp=(m==='complet'); r.classList.toggle('on',!comp); c.classList.toggle('on',comp); f.style.display=comp?'block':'none'; }
+
+  // ---- save ----
   async function save(){
-    if(!me){ msg('Connectez-vous d\'abord.','err'); return; }
-    var nom=$('qNom').value.trim();
-    if(!nom){ msg('Indiquez au moins un nom.','err'); return; }
-    var btn=$('qSave'); btn.disabled=true; msg('Enregistrement\u2026');
+    if(!me){ msg("Connectez-vous d'abord.",'err'); return; }
+    var app=$('qApp').value.trim(), cuv=$('qCuv').value.trim();
+    if(!app && !cuv){ msg('Indiquez au moins une appellation ou une cuvée.','err'); return; }
+    var btn=$('qSave'); btn.disabled=true; msg('Enregistrement…');
+    function ig(v){ v=(v||'').toString().trim(); return v===''?null:parseInt(v); }
+    function nm(v){ v=(v||'').toString().trim(); return v===''?null:parseFloat(v); }
     try{
-      var wine={ user_id:me.id, nom:nom, domaine:($('qDom').value.trim()||null), couleur:$('qCol').value,
-        region: sel?sel.region:null, sous_region:(sel&&sel.sub)?sel.sub:null, appellation: sel?sel.appellation:null, pays:'France' };
+      var note=ig($('qNote').value); if(note!=null&&(note<0||note>100)){ throw new Error('La note doit être entre 0 et 100.'); }
+      var style=readStyle();
+      var wine={ user_id:me.id, nom:(cuv||app), cuvee:(cuv||null), domaine:($('qDom').value.trim()||null),
+        couleur:($('qCol').value||null), style:(style.length?style:null),
+        region: sel?sel.region:null, sous_region:(sel&&sel.sub)?sel.sub:null,
+        appellation:(sel?sel.appellation:(app||null)), pays:'France' };
       var w=await sb.from('wines').insert(wine).select().single();
       if(w.error) throw w.error;
-      var bottle={ wine_id:w.data.id, millesime:($('qMil').value?parseInt($('qMil').value):null),
-        quantite:(parseInt($('qQte').value)||1), prix_achat:($('qPrix').value?parseFloat($('qPrix').value):null), devise:'EUR', statut:'en_cave' };
+      var bottle={ wine_id:w.data.id, millesime:ig($('qMil').value), quantite:(parseInt($('qQte').value)||1),
+        prix_achat:nm($('qPrix').value), devise:'EUR', statut:'en_cave',
+        date_achat:($('qDate').value||null), format:$('qFmt').value, niveau_garde:($('qGarde').value||null),
+        apogee_debut:ig($('qAd').value), apogee_fin:ig($('qAf').value), note_perso:note, commentaire:($('qCom').value.trim()||null) };
       var b=await sb.from('bottles').insert(bottle);
       if(b.error) throw b.error;
-      if(sel && sel.cepages && sel.cepages.length){
-        await ensureCepageMap();
-        var rows=[]; sel.cepages.forEach(function(cn){ var id=CEPAGE_MAP[cn]; if(id) rows.push({wine_id:w.data.id,cepage_id:id}); });
+      if(selCepages.length){
+        await ensureCepList();
+        var rows=[]; selCepages.forEach(function(cn){ var id=CEPAGE_MAP[cn]; if(id) rows.push({wine_id:w.data.id,cepage_id:id}); });
         if(rows.length){ var c=await sb.from('wine_cepages').insert(rows); if(c.error) console.warn('cepages',c.error); }
       }
-      msg('Ajout\u00e9 \u2713','ok');
-      $('qNom').value='';$('qDom').value='';$('qMil').value='';$('qQte').value='1';$('qPrix').value=''; sel=null; hideSuggest();
-      loadCave();
+      msg('Ajouté ✓','ok'); resetForm(); loadCave();
       setTimeout(function(){ msg(''); },2500);
-    }catch(err){ console.error(err); msg((err&&err.message)||'Erreur lors de l\'ajout.','err'); }
+    }catch(err){ console.error(err); msg((err&&err.message)||"Erreur lors de l'ajout.",'err'); }
     finally{ btn.disabled=false; }
+  }
+  function resetForm(){
+    ['qApp','qCuv','qDom','qMil','qPrix','qDate','qAd','qAf','qNote','qCom','qCep'].forEach(function(id){ var e=$(id); if(e)e.value=''; });
+    if($('qCol'))$('qCol').value=''; if($('qQte'))$('qQte').value='1'; if($('qGarde'))$('qGarde').value='';
+    if($('qFmt'))$('qFmt').selectedIndex=0;
+    sel=null; selCepages=[]; renderCepTags(); hideSuggest();
+    var c=$('qStyle'); if(c) Array.prototype.forEach.call(c.querySelectorAll('.style-chip.on'),function(el){ el.classList.remove('on'); });
   }
 
   // ---- list ----
@@ -1445,11 +1531,16 @@ function showSub(sub, el){
   // wire
   document.addEventListener('DOMContentLoaded',init); init();
   function init(){
-    var n=$('qNom'); if(!n) return;
+    var n=$('qApp'); if(!n) return;
     n.addEventListener('input',onType); n.addEventListener('keydown',onKey);
-    n.addEventListener('blur',function(){ setTimeout(function(){ $('qAc').classList.remove('on'); },150); });
+    n.addEventListener('blur',function(){ setTimeout(function(){ $('qAc').classList.remove('on'); },160); });
+    var cep=$('qCep'); cep.addEventListener('input',onCepType); cep.addEventListener('keydown',onCepKey);
+    cep.addEventListener('blur',function(){ setTimeout(function(){ $('qCepAc').classList.remove('on'); },160); });
     $('qSave').addEventListener('click',save);
-    syncAuth();
+    $('qReset').addEventListener('click',resetForm);
+    $('mRapide').addEventListener('click',function(){ showMode('rapide'); });
+    $('mComplet').addEventListener('click',function(){ showMode('complet'); });
+    renderStyleChips(); ensureCepList(); syncAuth();
   }
   // ===== v20 : résumé (tableau de bord) =====
   var RPOS={'Champagne':[118,58],'Alsace':[165,68],'Vallée de la Loire':[64,102],'Bourgogne':[128,96],'Beaujolais':[124,112],'Jura':[150,92],'Savoie':[158,108],'Vallée du Rhône':[132,128],'Bordeaux':[58,133],'Sud-Ouest':[70,150],'Languedoc-Roussillon':[108,160],'Provence':[150,150],'Corse':[185,182]};
