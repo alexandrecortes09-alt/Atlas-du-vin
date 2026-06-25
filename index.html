@@ -1546,7 +1546,7 @@ function showSub(sub, el){
     if($('emplList')) $('emplList').style.display=logged?'block':'none';
     if(!logged && $('caveEmpty')) $('caveEmpty').style.display='none';
   }
-  function setUser(u){ me=u; syncAuth(); if(u){ loadCave(); loadEmplacements(); } else { if($('caveList'))$('caveList').innerHTML=''; if($('emplList'))$('emplList').innerHTML=''; } }
+  function setUser(u){ me=u; syncAuth(); if(u){ setTimeout(function(){ loadCave(); loadEmplacements(); },0); } else { if($('caveList'))$('caveList').innerHTML=''; if($('emplList'))$('emplList').innerHTML=''; } }
 
   // wire
   document.addEventListener('DOMContentLoaded',init); init();
