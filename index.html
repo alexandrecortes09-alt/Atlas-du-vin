@@ -1873,8 +1873,17 @@ function showSub(sub, el){
   }
   (function wireOverlay(){ var o=document.getElementById('detOverlay'); if(o){ var c=o.querySelector('.detclose'); if(c)c.onclick=closeDetail; o.onclick=function(e){ if(e.target===o) closeDetail(); }; } })();
 
-  sb.auth.getSession().then(function(res){ setUser(res.data.session?res.data.session.user:null); });
-  sb.auth.onAuthStateChange(function(_e,session){ setUser(session?session.user:null); });
+  // Auth : on ne (re)charge la cave qu'à une vraie connexion, jamais à chaque rafraîchissement de jeton.
+  var caveLoaded=false;
+  function onAuth(event, u){
+    me=u; syncAuth();
+    if(!u){ caveLoaded=false; if($('caveList'))$('caveList').innerHTML=''; if($('emplList'))$('emplList').innerHTML=''; return; }
+    if((event==='SIGNED_IN'||event==='INITIAL_SESSION') && !caveLoaded){
+      caveLoaded=true;
+      setTimeout(function(){ if(me){ loadCave(); loadEmplacements(); } },0);
+    }
+  }
+  sb.auth.onAuthStateChange(function(event,session){ onAuth(event, session?session.user:null); });
 })();
 </script>
 
