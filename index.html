@@ -1248,6 +1248,34 @@ function showSub(sub, el){
 })();
 </script>
 
+<style>
+  /* ===== v19 — vue détail ===== */
+  .detov{position:fixed;inset:0;z-index:200;background:rgba(10,5,8,.74);display:none;align-items:flex-start;justify-content:center;overflow:auto;padding:40px 16px;}
+  .detov.on{display:flex;}
+  .detbox{background:#1f0e16;border:1px solid rgba(201,162,75,.25);border-radius:18px;max-width:760px;width:100%;box-shadow:0 40px 90px -30px #000;position:relative;}
+  .detclose{position:absolute;top:13px;right:15px;background:none;border:none;color:var(--gold-soft);font-size:26px;cursor:pointer;line-height:1;z-index:2;}
+  .dethead{padding:26px 28px 18px;border-bottom:1px solid rgba(201,162,75,.16);}
+  .detbodyinner{padding:20px 28px 28px;}
+  .detmeta{color:var(--parch);opacity:.72;font-size:11px;letter-spacing:.08em;text-transform:uppercase;}
+  .detname{font-family:'Fraunces',serif;font-weight:600;font-size:25px;color:var(--parch);margin:7px 0 2px;}
+  .detdom{color:var(--gold-soft);font-size:15px;}
+  .chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px;}
+  .chip{background:rgba(201,162,75,.1);border:1px solid rgba(201,162,75,.25);border-radius:20px;padding:5px 12px;font-size:12px;color:var(--gold-soft);}
+  .dsec-h{font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--gold-soft);margin:22px 0 12px;}
+  .lot{background:rgba(255,255,255,.03);border:1px solid rgba(201,162,75,.18);border-radius:12px;padding:14px 16px;margin-bottom:10px;}
+  .lot .lm{font-family:'Fraunces',serif;font-weight:600;font-size:16px;color:var(--parch);}
+  .lot .ld{font-size:12.5px;color:var(--parch);opacity:.78;margin-top:4px;}
+  .lot .lact{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px;}
+  .apo{font-size:10px;letter-spacing:.04em;text-transform:uppercase;padding:3px 9px;border-radius:20px;margin-left:6px;}
+  .apo.now{background:rgba(176,69,90,.18);color:#e296a6;} .apo.keep{background:rgba(110,139,90,.18);color:#a7c98a;} .apo.soon{background:rgba(224,169,75,.18);color:#e7c07c;}
+  .tlog{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid rgba(201,162,75,.1);font-size:13px;color:var(--parch);}
+  .tlog:last-child{border:none;}
+  .tlog .tn{font-family:'Fraunces',serif;font-weight:600;color:var(--gold-soft);min-width:54px;}
+  .btn-sm{font-family:'Spectral',serif;font-size:12px;padding:7px 13px;border-radius:8px;cursor:pointer;border:1px solid rgba(201,162,75,.3);background:transparent;color:var(--gold-soft);}
+  .btn-sm.wine{background:rgba(123,30,43,.4);color:#e9b9c2;border-color:rgba(168,52,72,.5);}
+  .btn-sm.gold{background:linear-gradient(135deg,#d9b65f,#bd923c);color:#241218;border:none;font-weight:600;}
+</style>
+<div class="detov" id="detOverlay"><div class="detbox"><button class="detclose" title="Fermer">&times;</button><div id="detBody"></div></div></div>
 <script>
 (function(){
   if(typeof sb==="undefined" || !sb){ console.warn("Supabase indisponible pour la cave"); return; }
@@ -1366,7 +1394,8 @@ function showSub(sub, el){
     var rows=r.data||[];
     if(!rows.length){ em.style.display='block'; return; }
     list.innerHTML=rows.map(card).join('');
-    Array.prototype.forEach.call(list.querySelectorAll('.del'),function(el){ el.onclick=function(){ delWine(el.getAttribute('data-id')); }; });
+    Array.prototype.forEach.call(list.querySelectorAll('.cwine'),function(el){ el.onclick=function(){ openDetail(el.getAttribute('data-id')); }; });
+    Array.prototype.forEach.call(list.querySelectorAll('.del'),function(el){ el.onclick=function(ev){ ev.stopPropagation(); delWine(el.getAttribute('data-id')); }; });
   }
   function card(w){
     var bs=w.bottles||[]; var qty=0, prix=null, mills=[];
@@ -1374,7 +1403,7 @@ function showSub(sub, el){
     var col=COLACC[w.couleur]||'#b0455a';
     var meta=[w.region,w.appellation].filter(Boolean).join(' · ')||'\u2014';
     var millstr=mills.length?mills.sort().join(', '):'sans mill\u00e9sime';
-    return '<div class="cwine"><span class="acc" style="background:'+col+'"></span>'+
+    return '<div class="cwine" data-id="'+w.id+'" style="cursor:pointer"><span class="acc" style="background:'+col+'"></span>'+
       (qty?'<span class="q">\u00d7'+qty+'</span>':'')+
       '<div class="nm">'+esc(w.nom)+'</div>'+
       '<div class="dom">'+(w.domaine?esc(w.domaine)+' \u00b7 ':'')+millstr+'</div>'+
@@ -1409,6 +1438,165 @@ function showSub(sub, el){
     $('qSave').addEventListener('click',save);
     syncAuth();
   }
+  // ===== v19 : vue détail + actions =====
+  var curDetailId=null, curW=null;
+  function val(id){ var e=document.getElementById(id); return e?e.value:''; }
+  function attr(x){ return esc(x); }
+  function closeDetail(){ var o=document.getElementById('detOverlay'); if(o)o.classList.remove('on'); }
+  function field(label,inner,cls){ return '<div class="qfield '+(cls||'')+'"><label>'+label+'</label>'+inner+'</div>'; }
+  function apoPill(b){
+    if(b.apogee_fin==null && b.apogee_debut==null) return '';
+    var y=new Date().getFullYear();
+    if(b.apogee_fin!=null && b.apogee_fin < y) return '<span class="apo now">à boire en priorité</span>';
+    if(b.apogee_fin!=null && b.apogee_fin <= y+1) return '<span class="apo soon">à boire bientôt</span>';
+    if(b.apogee_debut!=null && b.apogee_debut > y) return '<span class="apo keep">à attendre</span>';
+    return '<span class="apo keep">à garder</span>';
+  }
+  async function openDetail(id){
+    curDetailId=id;
+    var ov=document.getElementById('detOverlay'); ov.classList.add('on');
+    var body=document.getElementById('detBody'); body.innerHTML='<div class="detbodyinner"><p class="muted2">Chargement…</p></div>';
+    var r=await sb.from('wines').select('*, bottles(*), wine_cepages(cepage_id,cepages(nom))').eq('id',id).single();
+    if(r.error){ body.innerHTML='<div class="detbodyinner"><p class="muted2">Erreur de chargement.</p></div>'; console.error(r.error); return; }
+    curW=r.data;
+    var bids=(curW.bottles||[]).map(function(b){return b.id;});
+    var logs=[];
+    if(bids.length){ var t=await sb.from('tasting_log').select('*').in('bottle_id',bids).order('date_degustation',{ascending:false}); if(!t.error) logs=t.data||[]; }
+    renderDetail(curW, logs);
+  }
+  function lotRow(b){
+    var pr=(b.prix_achat!=null)?(b.prix_achat+' €'):'—';
+    var ap=(b.apogee_debut!=null||b.apogee_fin!=null)?('apogée '+(b.apogee_debut!=null?b.apogee_debut:'?')+'–'+(b.apogee_fin!=null?b.apogee_fin:'?')):'apogée non renseignée';
+    var bits=[ '×'+(b.quantite||0), pr, ap ];
+    if(b.note_perso!=null) bits.push(b.note_perso+'/100');
+    if(b.statut && b.statut!=='en_cave') bits.push(b.statut);
+    return '<div class="lot" data-bottle="'+b.id+'"><div class="lm">'+(b.millesime?b.millesime:'Sans millésime')+apoPill(b)+'</div>'+
+      '<div class="ld">'+esc(bits.join(' · '))+'</div>'+
+      (b.commentaire?'<div class="ld" style="font-style:italic">« '+esc(b.commentaire)+' »</div>':'')+
+      '<div class="lact"><button class="btn-sm gold" data-act="drink" data-bottle="'+b.id+'" data-qty="'+(b.quantite||0)+'">Boire une bouteille</button>'+
+      '<button class="btn-sm" data-act="editlot" data-bottle="'+b.id+'">Modifier ce lot</button></div></div>';
+  }
+  function renderDetail(w, logs){
+    var col=COLACC[w.couleur]||'#b0455a';
+    var ceps=(w.wine_cepages||[]).map(function(x){return x.cepages?x.cepages.nom:null;}).filter(Boolean);
+    var meta=[w.region,w.sous_region,w.appellation].filter(Boolean).join(' · ');
+    var head='<div class="dethead">'+
+      '<div class="detmeta"><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:'+col+';margin-right:7px;vertical-align:middle"></span>'+esc(w.couleur||'')+(meta?' · '+esc(meta):'')+'</div>'+
+      '<div class="detname">'+esc(w.nom)+'</div>'+
+      (w.domaine?'<div class="detdom">'+esc(w.domaine)+'</div>':'')+
+      (ceps.length?'<div class="chips">'+ceps.map(function(c){return '<span class="chip">'+esc(c)+'</span>';}).join('')+'</div>':'')+
+      '<div class="lact" style="margin-top:16px"><button class="btn-sm" data-act="editwine">Modifier le vin</button><button class="btn-sm wine" data-act="delwine">Supprimer</button></div>'+
+      '</div>';
+    var inner='<div class="detbodyinner"><div class="dsec-h">Lots en cave</div>';
+    if((w.bottles||[]).length) w.bottles.forEach(function(b){ inner+=lotRow(b); });
+    else inner+='<p class="muted2">Aucun lot.</p>';
+    inner+='<div class="dsec-h">Historique de dégustation</div>';
+    if(logs.length){ logs.forEach(function(l){ inner+='<div class="tlog"><span class="tn">'+(l.note!=null?l.note+'/100':'—')+'</span><span style="flex:1">'+esc(l.commentaire||'')+'</span><span style="opacity:.6;font-size:11.5px">'+esc(l.date_degustation||'')+'</span></div>'; }); }
+    else inner+='<p class="muted2">Pas encore de dégustation notée.</p>';
+    inner+='<div id="tform"></div>';
+    inner+='<button class="btn-sm gold" data-act="addtasting" style="margin-top:14px">Ajouter une dégustation</button>';
+    inner+='</div>';
+    document.getElementById('detBody').innerHTML=head+inner;
+    attachActs(document.getElementById('detBody'));
+  }
+  function attachActs(c){
+    Array.prototype.forEach.call(c.querySelectorAll('[data-act]'),function(el){
+      el.onclick=function(){
+        var a=el.getAttribute('data-act');
+        if(a==='editwine') return editWineForm();
+        if(a==='delwine') return delFromDetail();
+        if(a==='editlot') return editLotForm(el.getAttribute('data-bottle'));
+        if(a==='drink') return drink(el.getAttribute('data-bottle'),parseInt(el.getAttribute('data-qty'))||0);
+        if(a==='addtasting') return addTastingForm();
+        if(a==='savewine') return saveWine();
+        if(a==='savelot') return saveLot(el.getAttribute('data-bottle'));
+        if(a==='savetasting') return saveTasting();
+        if(a==='cancel') return openDetail(curDetailId);
+        if(a==='canceltf'){ var tf=document.getElementById('tform'); if(tf)tf.innerHTML=''; return; }
+      };
+    });
+  }
+  function editWineForm(){
+    var w=curW, cols=['rouge','blanc','rosé','effervescent','doux'];
+    var opts=cols.map(function(c){return '<option value="'+c+'"'+(w.couleur===c?' selected':'')+'>'+c+'</option>';}).join('');
+    var h='<div class="detbodyinner"><div class="dsec-h">Modifier le vin</div><div class="qform">'+
+      field('Nom','<input id="ewNom" value="'+attr(w.nom||'')+'">','qfull')+
+      field('Domaine','<input id="ewDom" value="'+attr(w.domaine||'')+'">')+
+      field('Couleur','<select id="ewCol">'+opts+'</select>')+
+      field('Région','<input id="ewReg" value="'+attr(w.region||'')+'">')+
+      field('Appellation','<input id="ewApp" value="'+attr(w.appellation||'')+'">')+
+      '</div><div class="qactions"><button class="btn-sm gold" data-act="savewine">Enregistrer</button><button class="btn-sm" data-act="cancel">Annuler</button><span class="qmsg" id="ewMsg"></span></div></div>';
+    document.getElementById('detBody').innerHTML=h; attachActs(document.getElementById('detBody'));
+  }
+  async function saveWine(){
+    var nom=val('ewNom').trim(); if(!nom){ document.getElementById('ewMsg').textContent='Nom requis.'; return; }
+    var upd={ nom:nom, domaine:val('ewDom').trim()||null, couleur:val('ewCol'), region:val('ewReg').trim()||null, appellation:val('ewApp').trim()||null };
+    var r=await sb.from('wines').update(upd).eq('id',curDetailId);
+    if(r.error){ document.getElementById('ewMsg').textContent='Erreur.'; console.error(r.error); return; }
+    loadCave(); openDetail(curDetailId);
+  }
+  function editLotForm(bid){
+    var b=(curW.bottles||[]).filter(function(x){return x.id===bid;})[0]; if(!b)return;
+    var st=['en_cave','bue','offerte'];
+    var opts=st.map(function(x){return '<option value="'+x+'"'+(((b.statut||'en_cave')===x)?' selected':'')+'>'+x+'</option>';}).join('');
+    function v(x){ return (x!=null&&x!=='')?x:''; }
+    var h='<div class="detbodyinner"><div class="dsec-h">Modifier le lot</div><div class="qform">'+
+      field('Millésime','<input id="elMil" type="number" value="'+v(b.millesime)+'">')+
+      field('Quantité','<input id="elQte" type="number" min="0" value="'+(b.quantite!=null?b.quantite:0)+'">')+
+      field('Prix d\'achat (€)','<input id="elPrix" type="number" step="0.01" value="'+v(b.prix_achat)+'">')+
+      field('Statut','<select id="elStat">'+opts+'</select>')+
+      field('Apogée début','<input id="elAd" type="number" value="'+v(b.apogee_debut)+'">')+
+      field('Apogée fin','<input id="elAf" type="number" value="'+v(b.apogee_fin)+'">')+
+      field('Note /100','<input id="elNote" type="number" min="0" max="100" value="'+v(b.note_perso)+'">')+
+      field('Commentaire','<input id="elCom" value="'+attr(b.commentaire||'')+'">','qfull')+
+      '</div><div class="qactions"><button class="btn-sm gold" data-act="savelot" data-bottle="'+b.id+'">Enregistrer</button><button class="btn-sm" data-act="cancel">Annuler</button><span class="qmsg" id="elMsg"></span></div></div>';
+    document.getElementById('detBody').innerHTML=h; attachActs(document.getElementById('detBody'));
+  }
+  async function saveLot(bid){
+    function ig(id){ var x=val(id).trim(); return x===''?null:parseInt(x); }
+    function nm(id){ var x=val(id).trim(); return x===''?null:parseFloat(x); }
+    var note=ig('elNote'); if(note!=null&&(note<0||note>100)){ document.getElementById('elMsg').textContent='Note 0–100.'; return; }
+    var upd={ millesime:ig('elMil'), quantite:(ig('elQte')!=null?ig('elQte'):0), prix_achat:nm('elPrix'), statut:val('elStat'), apogee_debut:ig('elAd'), apogee_fin:ig('elAf'), note_perso:note, commentaire:val('elCom').trim()||null };
+    var r=await sb.from('bottles').update(upd).eq('id',bid);
+    if(r.error){ document.getElementById('elMsg').textContent='Erreur.'; console.error(r.error); return; }
+    loadCave(); openDetail(curDetailId);
+  }
+  async function drink(bid,qty){
+    if(qty<=0){ alert('Plus de bouteille disponible dans ce lot.'); return; }
+    var upd={ quantite:qty-1 }; if(qty-1===0) upd.statut='bue';
+    var r=await sb.from('bottles').update(upd).eq('id',bid);
+    if(r.error){ alert('Erreur.'); console.error(r.error); return; }
+    loadCave(); openDetail(curDetailId);
+  }
+  async function delFromDetail(){
+    if(!confirm('Supprimer ce vin et tous ses lots ?'))return;
+    var r=await sb.from('wines').delete().eq('id',curDetailId);
+    if(r.error){ alert('Suppression impossible.'); console.error(r.error); return; }
+    closeDetail(); loadCave();
+  }
+  function addTastingForm(){
+    var today=new Date().toISOString().slice(0,10);
+    var bs=(curW.bottles||[]);
+    var bo=bs.map(function(b){return '<option value="'+b.id+'">'+(b.millesime?b.millesime:'sans millésime')+'</option>';}).join('');
+    var h='<div class="qform" style="margin-top:14px">'+
+      field('Lot','<select id="atBot">'+bo+'</select>')+
+      field('Date','<input id="atDate" type="date" value="'+today+'">')+
+      field('Note /100','<input id="atNote" type="number" min="0" max="100">')+
+      field('Commentaire','<input id="atCom">','qfull')+
+      '</div><div class="qactions"><button class="btn-sm gold" data-act="savetasting">Enregistrer</button><button class="btn-sm" data-act="canceltf">Annuler</button><span class="qmsg" id="atMsg"></span></div>';
+    document.getElementById('tform').innerHTML=h; attachActs(document.getElementById('tform'));
+  }
+  async function saveTasting(){
+    var bid=val('atBot'); if(!bid){ document.getElementById('atMsg').textContent='Choisissez un lot.'; return; }
+    var note=val('atNote').trim()===''?null:parseInt(val('atNote'));
+    if(note!=null&&(note<0||note>100)){ document.getElementById('atMsg').textContent='Note 0–100.'; return; }
+    var row={ bottle_id:bid, date_degustation:val('atDate')||null, note:note, commentaire:val('atCom').trim()||null };
+    var r=await sb.from('tasting_log').insert(row);
+    if(r.error){ document.getElementById('atMsg').textContent='Erreur.'; console.error(r.error); return; }
+    openDetail(curDetailId);
+  }
+  (function wireOverlay(){ var o=document.getElementById('detOverlay'); if(o){ var c=o.querySelector('.detclose'); if(c)c.onclick=closeDetail; o.onclick=function(e){ if(e.target===o) closeDetail(); }; } })();
+
   sb.auth.getSession().then(function(res){ setUser(res.data.session?res.data.session.user:null); });
   sb.auth.onAuthStateChange(function(_e,session){ setUser(session?session.user:null); });
 })();
