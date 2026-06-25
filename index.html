@@ -296,6 +296,19 @@
   .qsuggest .scep{display:inline-block;background:rgba(201,162,75,.12);border:1px solid rgba(201,162,75,.3);color:var(--gold-soft);border-radius:16px;padding:3px 10px;font-size:12px;margin:3px 4px 0 0;cursor:pointer;}
   .qsuggest .scep:hover{background:rgba(201,162,75,.22);}
 </style>
+<style>
+  /* ===== v22 — emplacements ===== */
+  .emcave{background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(0,0,0,.12));border:1px solid rgba(201,162,75,.2);border-radius:14px;margin-bottom:14px;overflow:hidden;}
+  .emhead{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:15px 18px;border-bottom:1px solid rgba(201,162,75,.14);flex-wrap:wrap;}
+  .emname{font-family:'Fraunces',serif;font-weight:600;font-size:17px;color:var(--parch);}
+  .emcount{font-family:'Spectral',serif;font-size:11.5px;color:var(--gold-soft);opacity:.85;margin-left:8px;}
+  .emacts{display:flex;gap:7px;flex-wrap:wrap;}
+  .emcasier{padding:12px 18px;border-bottom:1px solid rgba(201,162,75,.08);}
+  .emcasier:last-child{border-bottom:none;}
+  .emch{display:flex;align-items:center;gap:10px;color:var(--parch);font-size:14px;flex-wrap:wrap;}
+  .emch .emacts{margin-left:auto;}
+  .embot{font-size:12px;color:var(--parch);opacity:.72;margin-top:7px;line-height:1.55;}
+</style>
 <header class="topbar">
   <div class="brand" onclick="showSpace('atlas')">
     <span class="logo"><svg viewBox="0 0 48 48" fill="none"><g stroke="#e0c483" stroke-width="2"><circle cx="18" cy="27" r="5" fill="rgba(0,0,0,.2)"/><circle cx="29" cy="30" r="5" fill="rgba(0,0,0,.2)"/><circle cx="23" cy="38" r="5" fill="rgba(0,0,0,.2)"/><circle cx="24" cy="19" r="5" fill="rgba(0,0,0,.2)"/><path d="M24 14 q3 -8 11 -9" stroke-linecap="round"/></g></svg></span>
@@ -399,7 +412,7 @@
       </div>
       <div class="csub" id="c-carte"><h2 class="vtitle">Carte de <em>ma cave</em></h2><p class="vsub">À venir.</p><div class="placeholder"><p>La carte filtrée sur vos bouteilles, avec navigation dans les sous-régions, arrivera prochainement.</p></div></div>
       <div class="csub" id="c-liste"><div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;"><div><h2 class="vtitle">Tous mes <em>vins</em></h2><p class="vsub">Votre cave, enregistrée sur votre compte.</p></div><button class="btn-q gold" onclick="showSub('c-ajout',document.querySelector('#cavesidebar .gold-item'))">&#65291; Ajouter</button></div><div id="listGate" class="placeholder" style="display:none"><p>Connectez-vous pour voir votre cave.</p></div><div id="caveLoading" class="muted2" style="display:none">Chargement de votre cave&hellip;</div><div id="caveEmpty" class="placeholder" style="display:none"><p>Aucun vin pour l'instant. Ajoutez votre première bouteille pour démarrer votre cave.</p></div><div id="caveList" class="wines-cave"></div></div>
-      <div class="csub" id="c-emplacements"><h2 class="vtitle">Mes <em>emplacements</em></h2><p class="vsub">À venir.</p><div class="placeholder"><p>La gestion des caves et casiers (renommables) arrivera prochainement.</p></div></div>
+      <div class="csub" id="c-emplacements"><div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px"><div><h2 class="vtitle">Mes <em>emplacements</em></h2><p class="vsub">Vos lieux de stockage et casiers, entièrement renommables.</p></div><button class="btn-q gold" id="emAddCave">＋ Nouvelle cave</button></div><div id="emplGate" class="placeholder" style="display:none"><p>Connectez-vous pour gérer vos emplacements.</p></div><div id="emplList"></div></div>
       <div class="csub" id="c-wishlist"><h2 class="vtitle">Ma <em>wishlist</em></h2><p class="vsub">À venir.</p><div class="placeholder"><p>Vos envies d'achat, avec transfert vers la cave, arriveront prochainement.</p></div></div>
       <div class="csub" id="c-accords"><h2 class="vtitle">Accords <em>mets &amp; vins</em></h2><p class="vsub">À venir.</p><div class="placeholder"><p>Les accords (dans les deux sens) arriveront prochainement.</p></div></div>
       <div class="csub" id="c-ajout">
@@ -419,6 +432,9 @@
             <div class="qfield"><label>Quantité</label><input id="qQte" type="number" value="1" min="1"></div>
             <div class="qfield"><label>Prix d'achat (€)</label><input id="qPrix" type="number" step="0.01" placeholder="—"></div>
             <div class="qfield"><label>Date d'achat</label><input id="qDate" type="date"></div>
+            <div class="qfield"><label>Cave</label><select id="qCaveSel"><option value="">—</option></select></div>
+            <div class="qfield"><label>Casier</label><select id="qCasierSel"><option value="">—</option></select></div>
+            <div class="qfield"><label>Position (ex. Rangée 1)</label><input id="qPos" type="text" placeholder="Rangée, case…"></div>
           </div>
           <div class="complet-only" id="completFields" style="display:none">
             <div class="qfield qfull" style="margin-bottom:15px"><label>Style</label><div class="stylechips" id="qStyle"></div></div>
@@ -1458,7 +1474,8 @@ function showSub(sub, el){
       var bottle={ wine_id:w.data.id, millesime:ig($('qMil').value), quantite:(parseInt($('qQte').value)||1),
         prix_achat:nm($('qPrix').value), devise:'EUR', statut:'en_cave',
         date_achat:($('qDate').value||null), format:$('qFmt').value, niveau_garde:($('qGarde').value||null),
-        apogee_debut:ig($('qAd').value), apogee_fin:ig($('qAf').value), note_perso:note, commentaire:($('qCom').value.trim()||null) };
+        apogee_debut:ig($('qAd').value), apogee_fin:ig($('qAf').value), note_perso:note, commentaire:($('qCom').value.trim()||null),
+        cave_id:(($('qCaveSel')&&$('qCaveSel').value)||null), casier_id:(($('qCasierSel')&&$('qCasierSel').value)||null), position:(($('qPos')&&$('qPos').value.trim())||null) };
       var b=await sb.from('bottles').insert(bottle);
       if(b.error) throw b.error;
       if(selCepages.length){
@@ -1475,6 +1492,7 @@ function showSub(sub, el){
     ['qApp','qCuv','qDom','qMil','qPrix','qDate','qAd','qAf','qNote','qCom','qCep'].forEach(function(id){ var e=$(id); if(e)e.value=''; });
     if($('qCol'))$('qCol').value=''; if($('qQte'))$('qQte').value='1'; if($('qGarde'))$('qGarde').value='';
     if($('qFmt'))$('qFmt').selectedIndex=0;
+    if($('qCaveSel'))$('qCaveSel').value=''; if($('qPos'))$('qPos').value=''; if(typeof fillCasierSelect==='function')fillCasierSelect();
     sel=null; selCepages=[]; renderCepTags(); hideSuggest();
     var c=$('qStyle'); if(c) Array.prototype.forEach.call(c.querySelectorAll('.style-chip.on'),function(el){ el.classList.remove('on'); });
   }
@@ -1524,9 +1542,11 @@ function showSub(sub, el){
     if($('caveList')) $('caveList').style.display=logged?'grid':'none';
     if($('resGate')) $('resGate').style.display=logged?'none':'block';
     if($('resContent')) $('resContent').style.display=logged?'block':'none';
+    if($('emplGate')) $('emplGate').style.display=logged?'none':'block';
+    if($('emplList')) $('emplList').style.display=logged?'block':'none';
     if(!logged && $('caveEmpty')) $('caveEmpty').style.display='none';
   }
-  function setUser(u){ me=u; syncAuth(); if(u) loadCave(); else { if($('caveList'))$('caveList').innerHTML=''; } }
+  function setUser(u){ me=u; syncAuth(); if(u){ loadCave(); loadEmplacements(); } else { if($('caveList'))$('caveList').innerHTML=''; if($('emplList'))$('emplList').innerHTML=''; } }
 
   // wire
   document.addEventListener('DOMContentLoaded',init); init();
@@ -1540,8 +1560,77 @@ function showSub(sub, el){
     $('qReset').addEventListener('click',resetForm);
     $('mRapide').addEventListener('click',function(){ showMode('rapide'); });
     $('mComplet').addEventListener('click',function(){ showMode('complet'); });
-    renderStyleChips(); ensureCepList(); syncAuth();
+    renderStyleChips(); ensureCepList();
+    if($('emAddCave')) $('emAddCave').addEventListener('click',addCaveNew);
+    if($('qCaveSel')) $('qCaveSel').addEventListener('change',function(){ if($('qCasierSel'))$('qCasierSel').value=''; fillCasierSelect(); });
+    syncAuth();
   }
+  // ===== v22 : emplacements (caves + casiers) =====
+  var EMPL_CAVES=[], EMPL_CASIERS=[];
+  async function loadEmplacements(){
+    if(!me) return;
+    var cv=await sb.from('caves').select('id,nom').eq('user_id',me.id).order('created_at');
+    var cs=await sb.from('casiers').select('id,nom,cave_id').eq('user_id',me.id).order('created_at');
+    var bt=await sb.from('bottles').select('id,millesime,quantite,cave_id,casier_id,wines(nom)');
+    if(cv.error){ console.warn('caves',cv.error); return; }
+    EMPL_CAVES=cv.data||[]; EMPL_CASIERS=cs.data||[];
+    renderEmplacements(EMPL_CAVES, EMPL_CASIERS, (bt.data||[]));
+    fillEmplacementSelects();
+  }
+  function bq(bs){ return bs.reduce(function(s,b){return s+(b.quantite||0);},0); }
+  function blab(b){ return esc((b.wines&&b.wines.nom)||'?')+(b.millesime?' '+b.millesime:'')+' \u00d7'+(b.quantite||0); }
+  function renderEmplacements(caves, casiers, bottles){
+    var host=$('emplList'); if(!host)return;
+    var html='';
+    if(!caves.length){ html+='<div class="placeholder"><p>Aucune cave d\u00e9finie. Cr\u00e9ez votre premier lieu de stockage avec \u00ab\u00a0Nouvelle cave\u00a0\u00bb.</p></div>'; }
+    caves.forEach(function(cave){
+      var inCave=bottles.filter(function(b){return b.cave_id===cave.id;});
+      html+='<div class="emcave"><div class="emhead"><div class="emname">'+esc(cave.nom)+'<span class="emcount">'+bq(inCave)+' btl</span></div>'+
+        '<div class="emacts"><button class="btn-sm" data-empl="rencave" data-id="'+cave.id+'">Renommer</button>'+
+        '<button class="btn-sm" data-empl="addcasier" data-id="'+cave.id+'">+ Casier</button>'+
+        '<button class="btn-sm wine" data-empl="delcave" data-id="'+cave.id+'">Supprimer</button></div></div>';
+      casiers.filter(function(k){return k.cave_id===cave.id;}).forEach(function(k){
+        var bs=bottles.filter(function(b){return b.casier_id===k.id;});
+        html+='<div class="emcasier"><div class="emch"><b>'+esc(k.nom)+'</b><span class="emcount">'+bq(bs)+' btl</span>'+
+          '<span class="emacts"><button class="btn-sm" data-empl="rencasier" data-id="'+k.id+'">Renommer</button>'+
+          '<button class="btn-sm wine" data-empl="delcasier" data-id="'+k.id+'">Supprimer</button></span></div>'+
+          (bs.length?'<div class="embot">'+bs.map(blab).join(' \u00b7 ')+'</div>':'')+'</div>';
+      });
+      var nok=inCave.filter(function(b){return !b.casier_id;});
+      if(nok.length) html+='<div class="emcasier"><div class="emch"><b style="opacity:.7">Sans casier</b><span class="emcount">'+bq(nok)+' btl</span></div><div class="embot">'+nok.map(blab).join(' \u00b7 ')+'</div></div>';
+      html+='</div>';
+    });
+    var nocave=bottles.filter(function(b){return !b.cave_id;});
+    if(nocave.length) html+='<div class="emcave"><div class="emhead"><div class="emname" style="opacity:.8">Non rang\u00e9es<span class="emcount">'+bq(nocave)+' btl</span></div></div><div class="emcasier"><div class="embot">'+nocave.map(blab).join(' \u00b7 ')+'</div></div></div>';
+    host.innerHTML=html;
+    Array.prototype.forEach.call(host.querySelectorAll('[data-empl]'),function(el){
+      el.onclick=function(){
+        var a=el.getAttribute('data-empl'), id=el.getAttribute('data-id');
+        if(a==='rencave')return renameCave(id);
+        if(a==='delcave')return delCave(id);
+        if(a==='addcasier')return addCasier(id);
+        if(a==='rencasier')return renameCasier(id);
+        if(a==='delcasier')return delCasier(id);
+      };
+    });
+  }
+  async function addCaveNew(){ if(!me)return; var n=prompt('Nom de la nouvelle cave (lieu de stockage) :'); if(!n||!n.trim())return; var r=await sb.from('caves').insert({user_id:me.id,nom:n.trim()}); if(r.error){alert('Erreur lors de la création.');console.error(r.error);return;} loadEmplacements(); }
+  async function renameCave(id){ var c=EMPL_CAVES.filter(function(x){return x.id===id;})[0]; var n=prompt('Renommer la cave :',c?c.nom:''); if(n===null||!n.trim())return; var r=await sb.from('caves').update({nom:n.trim()}).eq('id',id); if(r.error){alert('Erreur.');return;} loadEmplacements(); }
+  async function delCave(id){ if(!confirm('Supprimer cette cave ? Les bouteilles ne seront pas supprimées, juste détachées de cet emplacement.'))return; var r=await sb.from('caves').delete().eq('id',id); if(r.error){alert('Erreur.');return;} loadEmplacements(); loadCave(); }
+  async function addCasier(caveId){ var n=prompt('Nom du casier :'); if(!n||!n.trim())return; var r=await sb.from('casiers').insert({user_id:me.id,cave_id:caveId,nom:n.trim()}); if(r.error){alert('Erreur lors de la création.');console.error(r.error);return;} loadEmplacements(); }
+  async function renameCasier(id){ var k=EMPL_CASIERS.filter(function(x){return x.id===id;})[0]; var n=prompt('Renommer le casier :',k?k.nom:''); if(n===null||!n.trim())return; var r=await sb.from('casiers').update({nom:n.trim()}).eq('id',id); if(r.error){alert('Erreur.');return;} loadEmplacements(); }
+  async function delCasier(id){ if(!confirm('Supprimer ce casier ? Les bouteilles seront détachées.'))return; var r=await sb.from('casiers').delete().eq('id',id); if(r.error){alert('Erreur.');return;} loadEmplacements(); }
+  function fillEmplacementSelects(){
+    var cs=$('qCaveSel'); if(cs){ var cur=cs.value; cs.innerHTML='<option value="">\u2014</option>'+EMPL_CAVES.map(function(c){return '<option value="'+c.id+'">'+esc(c.nom)+'</option>';}).join(''); cs.value=cur; }
+    fillCasierSelect();
+  }
+  function fillCasierSelect(){
+    var ks=$('qCasierSel'); if(!ks)return; var caveId=$('qCaveSel')?$('qCaveSel').value:''; var cur=ks.value;
+    var list=EMPL_CASIERS.filter(function(k){return k.cave_id===caveId;});
+    ks.innerHTML='<option value="">\u2014</option>'+list.map(function(k){return '<option value="'+k.id+'">'+esc(k.nom)+'</option>';}).join('');
+    ks.value=cur;
+  }
+
   // ===== v20 : résumé (tableau de bord) =====
   var RPOS={'Champagne':[118,58],'Alsace':[165,68],'Vallée de la Loire':[64,102],'Bourgogne':[128,96],'Beaujolais':[124,112],'Jura':[150,92],'Savoie':[158,108],'Vallée du Rhône':[132,128],'Bordeaux':[58,133],'Sud-Ouest':[70,150],'Languedoc-Roussillon':[108,160],'Provence':[150,150],'Corse':[185,182]};
   var RPATH='M100,24 L116,22 L136,32 L160,50 L168,59 L171,71 L166,86 L175,97 L178,104 L171,125 L167,139 L152,149 L142,151 L125,154 L116,158 L110,166 L95,167 L66,164 L51,161 L46,139 L42,122 L38,105 L37,99 L22,97 L4,87 L8,80 L23,76 L46,70 L51,53 L59,65 L73,61 L88,43 Z';
