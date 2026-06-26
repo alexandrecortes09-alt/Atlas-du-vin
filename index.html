@@ -1643,12 +1643,14 @@ function showSub(sub, el){
   }
   // ===== v22 : emplacements (caves + casiers) =====
   var EMPL_CAVES=[], EMPL_CASIERS=[];
-  function brow(b){ return '<div class="embrow"><span>'+blab(b)+'</span><button class="btn-sm" data-rang="'+b.id+'" data-name="'+attr((b.wines&&b.wines.nom)||'?')+'">Ranger</button></div>'; }
+  function brow(b){ return '<div class="embrow"><span>'+blab(b)+'</span><span><button class="btn-sm" data-rang="'+b.id+'" data-name="'+attr((b.wines&&b.wines.nom)||'?')+'">Ranger</button></span></div>'; }
+  function browRanged(b){ return '<div class="embrow"><span>'+blab(b)+'</span><span style="display:flex;gap:6px"><button class="btn-sm" data-rang="'+b.id+'" data-name="'+attr((b.wines&&b.wines.nom)||'?')+'" data-cave="'+(b.cave_id||'')+'" data-casier="'+(b.casier_id||'')+'">Modifier</button><button class="btn-sm wine" data-unrang="'+b.id+'">Retirer</button></span></div>'; }
+  async function unrangeBottle(bid){ var r=await sb.from('bottles').update({cave_id:null,casier_id:null}).eq('id',bid); if(r.error){ alert('Erreur lors du retrait.'); console.error(r.error); return; } loadEmplacements(); loadCave(); }
   function caveOptions(selId){ return '<option value="">— Cave —</option>'+EMPL_CAVES.map(function(c){return '<option value="'+c.id+'"'+(c.id===selId?' selected':'')+'>'+esc(c.nom)+'</option>';}).join(''); }
   function casierOptions(caveId, selId){ var list=EMPL_CASIERS.filter(function(k){return k.cave_id===caveId;}); return '<option value="">— Casier —</option>'+list.map(function(k){return '<option value="'+k.id+'"'+(k.id===selId?' selected':'')+'>'+esc(k.nom)+'</option>';}).join(''); }
-  function openRangeForm(bid, name){
-    var box=$('rangBox'); if(!box)return;
-    box.innerHTML='<div class="rangpanel"><div class="rangtitle">Ranger : <b>'+esc(name||'')+'</b></div><div class="rangrow"><select id="rgCave">'+caveOptions('')+'</select><select id="rgCasier">'+casierOptions('','')+'</select><button class="btn-sm gold" data-rangsave="'+bid+'">Ranger</button><button class="btn-sm" data-rangcancel="1">Annuler</button></div></div>';
+  function openRangeForm(bid, name, curCave, curCasier){
+    var box=$('rangBox'); if(!box)return; curCave=curCave||''; curCasier=curCasier||'';
+    box.innerHTML='<div class="rangpanel"><div class="rangtitle">Ranger : <b>'+esc(name||'')+'</b></div><div class="rangrow"><select id="rgCave">'+caveOptions(curCave)+'</select><select id="rgCasier">'+casierOptions(curCave,curCasier)+'</select><button class="btn-sm gold" data-rangsave="'+bid+'">Ranger</button><button class="btn-sm" data-rangcancel="1">Annuler</button></div></div>';
     var rc=$('rgCave'); if(rc) rc.onchange=function(){ var k=$('rgCasier'); if(k)k.innerHTML=casierOptions(rc.value,''); };
     Array.prototype.forEach.call(box.querySelectorAll('[data-rangsave]'),function(el){ el.onclick=function(){ saveRange(el.getAttribute('data-rangsave')); }; });
     Array.prototype.forEach.call(box.querySelectorAll('[data-rangcancel]'),function(el){ el.onclick=function(){ box.innerHTML=''; }; });
@@ -1687,10 +1689,10 @@ function showSub(sub, el){
         html+='<div class="emcasier"><div class="emch"><b>'+esc(k.nom)+'</b><span class="emcount">'+bq(bs)+' btl</span>'+
           '<span class="emacts"><button class="btn-sm" data-empl="rencasier" data-id="'+k.id+'">Renommer</button>'+
           '<button class="btn-sm wine" data-empl="delcasier" data-id="'+k.id+'">Supprimer</button></span></div>'+
-          (bs.length?'<div class="embot">'+bs.map(blab).join(' \u00b7 ')+'</div>':'')+'</div>';
+          (bs.length?'<div class="embot">'+bs.map(browRanged).join('')+'</div>':'')+'</div>';
       });
       var nok=inCave.filter(function(b){return !b.casier_id;});
-      if(nok.length) html+='<div class="emcasier"><div class="emch"><b style="opacity:.7">Sans casier</b><span class="emcount">'+bq(nok)+' btl</span></div><div class="embot">'+nok.map(brow).join('')+'</div></div>';
+      if(nok.length) html+='<div class="emcasier"><div class="emch"><b style="opacity:.7">Sans casier</b><span class="emcount">'+bq(nok)+' btl</span></div><div class="embot">'+nok.map(browRanged).join('')+'</div></div>';
       html+='</div>';
     });
     var nocave=bottles.filter(function(b){return !b.cave_id;});
@@ -1706,7 +1708,8 @@ function showSub(sub, el){
         if(a==='delcasier')return delCasier(id);
       };
     });
-    Array.prototype.forEach.call(host.querySelectorAll('[data-rang]'),function(el){ el.onclick=function(){ openRangeForm(el.getAttribute('data-rang'), el.getAttribute('data-name')); }; });
+    Array.prototype.forEach.call(host.querySelectorAll('[data-rang]'),function(el){ el.onclick=function(){ openRangeForm(el.getAttribute('data-rang'), el.getAttribute('data-name'), el.getAttribute('data-cave'), el.getAttribute('data-casier')); }; });
+    Array.prototype.forEach.call(host.querySelectorAll('[data-unrang]'),function(el){ el.onclick=function(){ unrangeBottle(el.getAttribute('data-unrang')); }; });
   }
   async function addCaveNew(){ if(!me)return; var n=prompt('Nom de la nouvelle cave (lieu de stockage) :'); if(!n||!n.trim())return; var r=await sb.from('caves').insert({user_id:me.id,nom:n.trim()}); if(r.error){alert('Erreur lors de la création.');console.error(r.error);return;} loadEmplacements(); }
   async function renameCave(id){ var c=EMPL_CAVES.filter(function(x){return x.id===id;})[0]; var n=prompt('Renommer la cave :',c?c.nom:''); if(n===null||!n.trim())return; var r=await sb.from('caves').update({nom:n.trim()}).eq('id',id); if(r.error){alert('Erreur.');return;} loadEmplacements(); }
@@ -1834,14 +1837,23 @@ function showSub(sub, el){
     if(bids.length){ var t=await sb.from('tasting_log').select('*').in('bottle_id',bids).order('date_degustation',{ascending:false}); if(!t.error) logs=t.data||[]; }
     renderDetail(curW, logs);
   }
+  function styleChipsHTML(sel){ sel=sel||[]; return STYLE_LIST.map(function(x){ return '<span class="style-chip'+(sel.indexOf(x)>=0?' on':'')+'" data-style="'+esc(x)+'">'+esc(x)+'</span>'; }).join(''); }
+  function readStyleEl(id){ var out=[]; var c=document.getElementById(id); if(c)Array.prototype.forEach.call(c.querySelectorAll('.style-chip.on'),function(el){ out.push(el.getAttribute('data-style')); }); return out; }
+  function fmtOptions(sel){ var L=['Bouteille (75cl)','Demi (37,5cl)','Magnum (1,5L)','Jéroboam (3L)']; return L.map(function(x){return '<option'+(x===sel?' selected':'')+'>'+x+'</option>';}).join(''); }
+  function gardeOptions(sel){ sel=sel||''; var L=['','À boire maintenant','Garde courte (2–5 ans)','Garde moyenne (5–10 ans)','Grande garde (10 ans+)']; return L.map(function(x){return '<option value="'+x+'"'+(x===sel?' selected':'')+'>'+(x||'—')+'</option>';}).join(''); }
+  function lotLoc(b){ if(!b.cave_id && !b.casier_id)return ''; var cv=EMPL_CAVES.filter(function(c){return c.id===b.cave_id;})[0]; var k=EMPL_CASIERS.filter(function(x){return x.id===b.casier_id;})[0]; var parts=[]; if(cv)parts.push(cv.nom); if(k)parts.push(k.nom); if(b.position)parts.push(b.position); return parts.join(' · '); }
   function lotRow(b){
     var pr=(b.prix_achat!=null)?(b.prix_achat+' €'):'—';
     var ap=(b.apogee_debut!=null||b.apogee_fin!=null)?('apogée '+(b.apogee_debut!=null?b.apogee_debut:'?')+'–'+(b.apogee_fin!=null?b.apogee_fin:'?')):'apogée non renseignée';
     var bits=[ '×'+(b.quantite||0), pr, ap ];
     if(b.note_perso!=null) bits.push(b.note_perso+'/100');
     if(b.statut && b.statut!=='en_cave') bits.push(b.statut);
+    if(b.format && b.format!=='Bouteille (75cl)') bits.push(b.format);
+    if(b.niveau_garde) bits.push(b.niveau_garde);
+    var loc=lotLoc(b);
     return '<div class="lot" data-bottle="'+b.id+'"><div class="lm">'+(b.millesime?b.millesime:'Sans millésime')+apoPill(b)+'</div>'+
       '<div class="ld">'+esc(bits.join(' · '))+'</div>'+
+      (loc?'<div class="ld">Emplacement : '+esc(loc)+'</div>':'')+
       (b.commentaire?'<div class="ld" style="font-style:italic">« '+esc(b.commentaire)+' »</div>':'')+
       '<div class="lact"><button class="btn-sm gold" data-act="drink" data-bottle="'+b.id+'" data-qty="'+(b.quantite||0)+'">Boire une bouteille</button>'+
       '<button class="btn-sm" data-act="editlot" data-bottle="'+b.id+'">Modifier ce lot</button></div></div>';
@@ -1855,6 +1867,7 @@ function showSub(sub, el){
       '<div class="detname">'+esc(w.nom)+'</div>'+
       (w.domaine?'<div class="detdom">'+esc(w.domaine)+'</div>':'')+
       (ceps.length?'<div class="chips">'+ceps.map(function(c){return '<span class="chip">'+esc(c)+'</span>';}).join('')+'</div>':'')+
+      ((w.style&&w.style.length)?'<div class="chips" style="margin-top:7px">'+w.style.map(function(st){return '<span class="chip">'+esc(st)+'</span>';}).join('')+'</div>':'')+
       '<div class="lact" style="margin-top:16px"><button class="btn-sm" data-act="editwine">Modifier le vin</button><button class="btn-sm wine" data-act="delwine">Supprimer</button></div>'+
       '</div>';
     var inner='<div class="detbodyinner"><div class="dsec-h">Lots en cave</div>';
@@ -1891,16 +1904,20 @@ function showSub(sub, el){
     var opts=cols.map(function(c){return '<option value="'+c+'"'+(w.couleur===c?' selected':'')+'>'+c+'</option>';}).join('');
     var h='<div class="detbodyinner"><div class="dsec-h">Modifier le vin</div><div class="qform">'+
       field('Nom','<input id="ewNom" value="'+attr(w.nom||'')+'">','qfull')+
+      field('Cuvée','<input id="ewCuv" value="'+attr(w.cuvee||'')+'">')+
       field('Domaine','<input id="ewDom" value="'+attr(w.domaine||'')+'">')+
       field('Couleur','<select id="ewCol">'+opts+'</select>')+
       field('Région','<input id="ewReg" value="'+attr(w.region||'')+'">')+
       field('Appellation','<input id="ewApp" value="'+attr(w.appellation||'')+'">')+
+      '<div class="qfield qfull"><label>Style</label><div class="stylechips" id="ewStyle">'+styleChipsHTML(w.style||[])+'</div></div>'+
       '</div><div class="qactions"><button class="btn-sm gold" data-act="savewine">Enregistrer</button><button class="btn-sm" data-act="cancel">Annuler</button><span class="qmsg" id="ewMsg"></span></div></div>';
     document.getElementById('detBody').innerHTML=h; attachActs(document.getElementById('detBody'));
+    var sc=document.getElementById('ewStyle'); if(sc) Array.prototype.forEach.call(sc.querySelectorAll('.style-chip'),function(el){ el.onclick=function(){ el.classList.toggle('on'); }; });
   }
   async function saveWine(){
     var nom=val('ewNom').trim(); if(!nom){ document.getElementById('ewMsg').textContent='Nom requis.'; return; }
-    var upd={ nom:nom, domaine:val('ewDom').trim()||null, couleur:val('ewCol'), region:val('ewReg').trim()||null, appellation:val('ewApp').trim()||null };
+    var st=readStyleEl('ewStyle');
+    var upd={ nom:nom, cuvee:val('ewCuv').trim()||null, domaine:val('ewDom').trim()||null, couleur:val('ewCol'), region:val('ewReg').trim()||null, appellation:val('ewApp').trim()||null, style:(st.length?st:null) };
     var r=await sb.from('wines').update(upd).eq('id',curDetailId);
     if(r.error){ document.getElementById('ewMsg').textContent='Erreur.'; console.error(r.error); return; }
     loadCave(); openDetail(curDetailId);
@@ -1918,6 +1935,9 @@ function showSub(sub, el){
       field('Cave','<select id="elCave">'+caveOptions(b.cave_id)+'</select>')+
       field('Casier','<select id="elCasier">'+casierOptions(b.cave_id,b.casier_id)+'</select>')+
       field('Position','<input id="elPos" value="'+attr(b.position||'')+'">')+
+      field('Format','<select id="elFmt">'+fmtOptions(b.format)+'</select>')+
+      field("Date d'achat",'<input id="elDate" type="date" value="'+(b.date_achat||'')+'">')+
+      field('Niveau de garde','<select id="elGarde">'+gardeOptions(b.niveau_garde)+'</select>')+
       field('Apogée début','<input id="elAd" type="number" value="'+v(b.apogee_debut)+'">')+
       field('Apogée fin','<input id="elAf" type="number" value="'+v(b.apogee_fin)+'">')+
       field('Note /100','<input id="elNote" type="number" min="0" max="100" value="'+v(b.note_perso)+'">')+
@@ -1931,7 +1951,7 @@ function showSub(sub, el){
     function nm(id){ var x=val(id).trim(); return x===''?null:parseFloat(x); }
     var note=ig('elNote'); if(note!=null&&(note<0||note>100)){ document.getElementById('elMsg').textContent='Note 0–100.'; return; }
     var upd={ millesime:ig('elMil'), quantite:(ig('elQte')!=null?ig('elQte'):0), prix_achat:nm('elPrix'), statut:val('elStat'), apogee_debut:ig('elAd'), apogee_fin:ig('elAf'), note_perso:note, commentaire:val('elCom').trim()||null,
-      cave_id:(val('elCave')||null), casier_id:(val('elCasier')||null), position:(val('elPos').trim()||null) };
+      cave_id:(val('elCave')||null), casier_id:(val('elCasier')||null), position:(val('elPos').trim()||null), format:val('elFmt'), date_achat:(val('elDate')||null), niveau_garde:(val('elGarde')||null) };
     var r=await sb.from('bottles').update(upd).eq('id',bid);
     if(r.error){ document.getElementById('elMsg').textContent='Erreur.'; console.error(r.error); return; }
     loadCave(); loadEmplacements(); openDetail(curDetailId);
