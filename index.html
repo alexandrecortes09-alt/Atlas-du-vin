@@ -318,6 +318,23 @@
   .rangrow{display:flex;gap:9px;flex-wrap:wrap;align-items:center;}
   .rangrow select{background:rgba(0,0,0,.3);border:1px solid rgba(201,162,75,.25);border-radius:8px;padding:8px 11px;color:var(--parch);font-family:'Spectral',serif;font-size:13px;}
 </style>
+<style>
+  /* ===== v24 — liste : filtres & vues ===== */
+  .listbar{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin:16px 0 4px;}
+  .lsearch{flex:1;min-width:200px;background:rgba(0,0,0,.25);border:1px solid rgba(201,162,75,.22);border-radius:9px;padding:9px 13px;color:var(--parch);font-family:'Spectral',serif;font-size:13.5px;outline:none;}
+  .lsel{background:rgba(0,0,0,.25);border:1px solid rgba(201,162,75,.22);border-radius:9px;padding:9px 11px;color:var(--parch);font-family:'Spectral',serif;font-size:13px;outline:none;}
+  .lchk{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--parch);opacity:.85;cursor:pointer;white-space:nowrap;}
+  .seg{display:inline-flex;background:rgba(0,0,0,.25);border:1px solid rgba(201,162,75,.2);border-radius:9px;padding:3px;}
+  .seg button{border:none;background:none;color:var(--parch);opacity:.6;font-family:'Spectral',serif;font-size:12.5px;padding:7px 13px;border-radius:7px;cursor:pointer;}
+  .seg button.on{background:rgba(201,162,75,.16);color:var(--gold-soft);opacity:1;}
+  table.ctbl{width:100%;border-collapse:collapse;font-size:13px;margin-top:16px;}
+  table.ctbl th{text-align:left;font-family:'Spectral',serif;font-weight:500;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold-soft);opacity:.85;padding:9px 12px;border-bottom:1px solid rgba(201,162,75,.2);}
+  table.ctbl td{padding:10px 12px;border-bottom:1px solid rgba(201,162,75,.1);color:var(--parch);}
+  table.ctbl tbody tr{cursor:pointer;}
+  table.ctbl tbody tr:hover td{background:rgba(201,162,75,.07);}
+  .ctag{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px;vertical-align:middle;}
+  .lnores{color:var(--parch);opacity:.6;font-size:13px;margin-top:18px;}
+</style>
 <header class="topbar">
   <div class="brand" onclick="showSpace('atlas')">
     <span class="logo"><svg viewBox="0 0 48 48" fill="none"><g stroke="#e0c483" stroke-width="2"><circle cx="18" cy="27" r="5" fill="rgba(0,0,0,.2)"/><circle cx="29" cy="30" r="5" fill="rgba(0,0,0,.2)"/><circle cx="23" cy="38" r="5" fill="rgba(0,0,0,.2)"/><circle cx="24" cy="19" r="5" fill="rgba(0,0,0,.2)"/><path d="M24 14 q3 -8 11 -9" stroke-linecap="round"/></g></svg></span>
@@ -420,7 +437,7 @@
         <div style="display:none"><button id="dashBtn"></button></div>
       </div>
       <div class="csub" id="c-carte"><h2 class="vtitle">Carte de <em>ma cave</em></h2><p class="vsub">À venir.</p><div class="placeholder"><p>La carte filtrée sur vos bouteilles, avec navigation dans les sous-régions, arrivera prochainement.</p></div></div>
-      <div class="csub" id="c-liste"><div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;"><div><h2 class="vtitle">Tous mes <em>vins</em></h2><p class="vsub">Votre cave, enregistrée sur votre compte.</p></div><button class="btn-q gold" onclick="showSub('c-ajout',document.querySelector('#cavesidebar .gold-item'))">&#65291; Ajouter</button></div><div id="listGate" class="placeholder" style="display:none"><p>Connectez-vous pour voir votre cave.</p></div><div id="caveLoading" class="muted2" style="display:none">Chargement de votre cave&hellip;</div><div id="caveEmpty" class="placeholder" style="display:none"><p>Aucun vin pour l'instant. Ajoutez votre première bouteille pour démarrer votre cave.</p></div><div id="caveList" class="wines-cave"></div></div>
+      <div class="csub" id="c-liste"><div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;"><div><h2 class="vtitle">Tous mes <em>vins</em></h2><p class="vsub">Votre cave, enregistrée sur votre compte.</p></div><button class="btn-q gold" onclick="showSub('c-ajout',document.querySelector('#cavesidebar .gold-item'))">&#65291; Ajouter</button></div><div id="listGate" class="placeholder" style="display:none"><p>Connectez-vous pour voir votre cave.</p></div><div class="listbar" id="listbar" style="display:none"><input id="fSearch" class="lsearch" placeholder="Rechercher un vin, domaine, appellation…"><select id="fColor" class="lsel"><option value="">Toutes couleurs</option><option value="rouge">Rouge</option><option value="blanc">Blanc</option><option value="rosé">Rosé</option><option value="effervescent">Effervescent</option><option value="doux">Doux/Liquoreux</option></select><select id="fRegion" class="lsel"><option value="">Toutes régions</option></select><select id="fSort" class="lsel"><option value="recent">Plus récents</option><option value="nom">Nom (A→Z)</option><option value="mil">Millésime</option><option value="note">Note</option><option value="prix">Prix</option></select><label class="lchk"><input type="checkbox" id="fHide0" checked> Masquer épuisées</label><span class="seg"><button id="vVign" class="on" type="button">Vignettes</button><button id="vList" type="button">Liste</button></span></div><div id="caveLoading" class="muted2" style="display:none">Chargement de votre cave&hellip;</div><div id="caveEmpty" class="placeholder" style="display:none"><p>Aucun vin pour l'instant. Ajoutez votre première bouteille pour démarrer votre cave.</p></div><div id="caveList" class="wines-cave"></div><div id="caveTable" style="display:none"></div><div id="caveNores" class="lnores" style="display:none">Aucun vin ne correspond à ces filtres.</div></div>
       <div class="csub" id="c-emplacements"><div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px"><div><h2 class="vtitle">Mes <em>emplacements</em></h2><p class="vsub">Vos lieux de stockage et casiers, entièrement renommables.</p></div><button class="btn-q gold" id="emAddCave">＋ Nouvelle cave</button></div><div id="emplGate" class="placeholder" style="display:none"><p>Connectez-vous pour gérer vos emplacements.</p></div><div id="rangBox"></div><div id="emplList"></div></div>
       <div class="csub" id="c-wishlist"><h2 class="vtitle">Ma <em>wishlist</em></h2><p class="vsub">À venir.</p><div class="placeholder"><p>Vos envies d'achat, avec transfert vers la cave, arriveront prochainement.</p></div></div>
       <div class="csub" id="c-accords"><h2 class="vtitle">Accords <em>mets &amp; vins</em></h2><p class="vsub">À venir.</p><div class="placeholder"><p>Les accords (dans les deux sens) arriveront prochainement.</p></div></div>
@@ -1327,7 +1344,7 @@ function showSub(sub, el){
   .detname{font-family:'Fraunces',serif;font-weight:600;font-size:25px;color:var(--parch);margin:7px 0 2px;}
   .detdom{color:var(--gold-soft);font-size:15px;}
   .chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px;}
-  .chip{background:rgba(201,162,75,.1);border:1px solid rgba(201,162,75,.25);border-radius:20px;padding:5px 12px;font-size:12px;color:var(--gold-soft);}
+  .detbox .chip{background:rgba(201,162,75,.1);border:1px solid rgba(201,162,75,.25);border-radius:20px;padding:5px 12px;font-size:12px;color:var(--gold-soft);}
   .dsec-h{font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--gold-soft);margin:22px 0 12px;}
   .lot{background:rgba(255,255,255,.03);border:1px solid rgba(201,162,75,.18);border-radius:12px;padding:14px 16px;margin-bottom:10px;}
   .lot .lm{font-family:'Fraunces',serif;font-weight:600;font-size:16px;color:var(--parch);}
@@ -1507,19 +1524,63 @@ function showSub(sub, el){
   }
 
   // ---- list ----
+  var CAVE_ROWS=[], listView='vign';
   async function loadCave(){
     if(!me){ return; }
-    var list=$('caveList'), ld=$('caveLoading'), em=$('caveEmpty');
-    list.innerHTML=''; em.style.display='none'; ld.style.display='block';
-    var r=await sb.from('wines').select('id,nom,domaine,region,sous_region,appellation,couleur,bottles(id,millesime,quantite,prix_achat,apogee_debut,apogee_fin,statut)').eq('user_id',me.id).order('created_at',{ascending:false});
+    var ld=$('caveLoading'), em=$('caveEmpty');
+    em.style.display='none'; ld.style.display='block';
+    var r=await sb.from('wines').select('id,nom,domaine,region,sous_region,appellation,couleur,bottles(id,millesime,quantite,prix_achat,apogee_debut,apogee_fin,statut,note_perso)').eq('user_id',me.id).order('created_at',{ascending:false});
     ld.style.display='none';
-    if(r.error){ list.innerHTML='<p class="muted2">Erreur de chargement.</p>'; console.error(r.error); return; }
-    var rows=r.data||[];
-    renderResume(rows);
-    if(!rows.length){ em.style.display='block'; return; }
-    list.innerHTML=rows.map(card).join('');
+    if(r.error){ $('caveList').innerHTML='<p class="muted2">Erreur de chargement.</p>'; console.error(r.error); return; }
+    CAVE_ROWS=r.data||[];
+    renderResume(CAVE_ROWS);
+    populateRegionFilter();
+    applyListe();
+  }
+  function populateRegionFilter(){
+    var sel=$('fRegion'); if(!sel)return; var cur=sel.value;
+    var regs={}; CAVE_ROWS.forEach(function(w){ if(w.region) regs[w.region]=1; });
+    var keys=Object.keys(regs).sort();
+    sel.innerHTML='<option value="">Toutes r\u00e9gions</option>'+keys.map(function(r){return '<option value="'+esc(r)+'">'+esc(r)+'</option>';}).join('');
+    sel.value=cur;
+  }
+  function agg(w){ var bs=w.bottles||[]; var qty=0,prix=null,note=null,mills=[]; bs.forEach(function(b){ qty+=(b.quantite||0); if(b.millesime)mills.push(b.millesime); if(b.prix_achat!=null&&(prix==null||b.prix_achat>prix))prix=b.prix_achat; if(b.note_perso!=null&&(note==null||b.note_perso>note))note=b.note_perso; }); return {qty:qty,prix:prix,note:note,mills:mills}; }
+  function applyListe(){
+    if(!$('caveList'))return;
+    var rows=CAVE_ROWS||[]; var em=$('caveEmpty'), bar=$('listbar'), nores=$('caveNores');
+    if(!rows.length){ if(bar)bar.style.display='none'; if(em)em.style.display='block'; $('caveList').innerHTML=''; if($('caveTable'))$('caveTable').innerHTML=''; if(nores)nores.style.display='none'; return; }
+    if(bar)bar.style.display='flex'; if(em)em.style.display='none';
+    var q=norm($('fSearch').value.trim()), col=$('fColor').value, reg=$('fRegion').value, sort=$('fSort').value, hide0=$('fHide0').checked;
+    var items=rows.map(function(w){ return {w:w, a:agg(w)}; });
+    items=items.filter(function(it){ var w=it.w, a=it.a;
+      if(hide0 && a.qty<=0) return false;
+      if(col && (w.couleur||'')!==col) return false;
+      if(reg && (w.region||'')!==reg) return false;
+      if(q){ var hay=norm([w.nom,w.domaine,w.appellation,w.region].filter(Boolean).join(' ')); if(hay.indexOf(q)<0) return false; }
+      return true; });
+    items.sort(function(x,y){
+      if(sort==='nom') return (x.w.nom||'').localeCompare(y.w.nom||'');
+      if(sort==='mil') return Math.max.apply(null,y.a.mills.concat([0]))-Math.max.apply(null,x.a.mills.concat([0]));
+      if(sort==='note') return (y.a.note==null?-1:y.a.note)-(x.a.note==null?-1:x.a.note);
+      if(sort==='prix') return (y.a.prix==null?-1:y.a.prix)-(x.a.prix==null?-1:x.a.prix);
+      return 0; });
+    if(!items.length){ $('caveList').innerHTML=''; if($('caveTable'))$('caveTable').innerHTML=''; if(nores)nores.style.display='block'; return; }
+    if(nores)nores.style.display='none';
+    if(listView==='list'){ renderTable(items); $('caveList').style.display='none'; if($('caveTable'))$('caveTable').style.display='block'; }
+    else { renderVign(items); $('caveList').style.display='grid'; if($('caveTable'))$('caveTable').style.display='none'; }
+  }
+  function renderVign(items){
+    var list=$('caveList'); list.innerHTML=items.map(function(it){return card(it.w);}).join('');
     Array.prototype.forEach.call(list.querySelectorAll('.cwine'),function(el){ el.onclick=function(){ openDetail(el.getAttribute('data-id')); }; });
     Array.prototype.forEach.call(list.querySelectorAll('.del'),function(el){ el.onclick=function(ev){ ev.stopPropagation(); delWine(el.getAttribute('data-id')); }; });
+  }
+  function renderTable(items){
+    var t=$('caveTable'); if(!t)return;
+    var head='<table class="ctbl"><thead><tr><th>Vin</th><th>Domaine</th><th>Mill\u00e9sime(s)</th><th>R\u00e9gion</th><th>Qt\u00e9</th><th>Prix</th><th>Note</th></tr></thead><tbody>';
+    var body=items.map(function(it){ var w=it.w,a=it.a; var col=COLACC[w.couleur]||'#b0455a';
+      return '<tr data-id="'+w.id+'"><td><span class="ctag" style="background:'+col+'"></span>'+esc(w.nom)+'</td><td>'+esc(w.domaine||'\u2014')+'</td><td>'+(a.mills.length?a.mills.slice().sort().join(', '):'\u2014')+'</td><td>'+esc(w.region||'\u2014')+'</td><td>'+a.qty+'</td><td>'+(a.prix!=null?a.prix+' \u20ac':'\u2014')+'</td><td>'+(a.note!=null?a.note:'\u2014')+'</td></tr>'; }).join('');
+    t.innerHTML=head+body+'</tbody></table>';
+    Array.prototype.forEach.call(t.querySelectorAll('tr[data-id]'),function(el){ el.onclick=function(){ openDetail(el.getAttribute('data-id')); }; });
   }
   function card(w){
     var bs=w.bottles||[]; var qty=0, prix=null, mills=[];
@@ -1548,7 +1609,9 @@ function showSub(sub, el){
     if($('addGate')) $('addGate').style.display=logged?'none':'block';
     if($('addCard')) $('addCard').style.display=logged?'block':'none';
     if($('listGate')) $('listGate').style.display=logged?'none':'block';
-    if($('caveList')) $('caveList').style.display=logged?'grid':'none';
+    if($('caveList') && !logged) $('caveList').style.display='none';
+    if($('listbar') && !logged) $('listbar').style.display='none';
+    if($('caveTable') && !logged) $('caveTable').style.display='none';
     if($('resGate')) $('resGate').style.display=logged?'none':'block';
     if($('resContent')) $('resContent').style.display=logged?'block':'none';
     if($('emplGate')) $('emplGate').style.display=logged?'none':'block';
@@ -1572,6 +1635,9 @@ function showSub(sub, el){
     renderStyleChips(); ensureCepList();
     if($('emAddCave')) $('emAddCave').addEventListener('click',addCaveNew);
     var emItem=document.querySelector('#cavesidebar .side-item[data-sub="c-emplacements"]'); if(emItem) emItem.addEventListener('click',function(){ if(me) loadEmplacements(); });
+    ['fSearch','fColor','fRegion','fSort','fHide0'].forEach(function(id){ var e=$(id); if(e){ e.addEventListener(id==='fSearch'?'input':'change',applyListe); } });
+    if($('vVign')) $('vVign').addEventListener('click',function(){ listView='vign'; $('vVign').classList.add('on'); $('vList').classList.remove('on'); applyListe(); });
+    if($('vList')) $('vList').addEventListener('click',function(){ listView='list'; $('vList').classList.add('on'); $('vVign').classList.remove('on'); applyListe(); });
     if($('qCaveSel')) $('qCaveSel').addEventListener('change',function(){ if($('qCasierSel'))$('qCasierSel').value=''; fillCasierSelect(); });
     syncAuth();
   }
