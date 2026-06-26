@@ -335,6 +335,41 @@
   .ctag{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px;vertical-align:middle;}
   .lnores{color:var(--parch);opacity:.6;font-size:13px;margin-top:18px;}
 </style>
+<style>
+  /* ===== v26 — dashboard Résumé ===== */
+  .dash-tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:20px 0 16px;}
+  .dtile{background:rgba(255,255,255,.025);border:1px solid rgba(201,162,75,.16);border-radius:16px;padding:18px 20px;display:flex;flex-direction:column;justify-content:center;min-height:128px;}
+  .dt-big{font-family:'Fraunces',serif;font-weight:500;font-size:40px;line-height:1;color:var(--gold-soft);letter-spacing:-.01em;}
+  .dt-big small{font-size:21px;opacity:.85;margin-left:2px;}
+  .dt-lbl{font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--parch);opacity:.55;margin-top:9px;}
+  .dt-sub{font-size:13px;color:var(--gold-soft);opacity:.85;margin-top:7px;}
+  .dtile-chart{justify-content:flex-start;padding:16px 18px;}
+  .dtile-chart .dt-lbl{margin-top:0;margin-bottom:8px;}
+  .dash-lists{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+  .card2{background:rgba(255,255,255,.025);border:1px solid rgba(201,162,75,.16);border-radius:16px;padding:18px 20px;}
+  .sect-h2{font-family:'Fraunces',serif;font-size:15px;color:var(--parch);margin-bottom:14px;opacity:.95;}
+  .dash-map{margin-bottom:10px;}
+  .dash-map .rmap{display:flex;flex-direction:column;align-items:center;}
+  .dash-map .rmap svg{max-width:300px;height:auto;}
+  .rlg{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--parch);padding:3px 0;}
+  .rlg .dot{width:10px;height:10px;border-radius:50%;display:inline-block;flex-shrink:0;}
+  .rlg .pct{margin-left:auto;opacity:.65;font-size:12px;}
+  .rbar{display:flex;align-items:center;gap:10px;padding:5px 0;font-size:12.5px;color:var(--parch);}
+  .rbar .nm{width:34%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.9;}
+  .rbar .tk{flex:1;height:8px;background:rgba(201,162,75,.1);border-radius:6px;overflow:hidden;}
+  .rbar .fl{display:block;height:100%;border-radius:6px;}
+  .rbar .q{width:26px;text-align:right;opacity:.7;font-size:12px;}
+  .rsoon{display:flex;align-items:flex-start;gap:9px;padding:7px 0;border-bottom:1px solid rgba(201,162,75,.08);font-size:13px;color:var(--parch);}
+  .rsoon:last-child{border-bottom:none;}
+  .rsoon .sw{width:9px;height:9px;border-radius:50%;margin-top:5px;flex-shrink:0;}
+  .rsoon .grow{flex:1;line-height:1.45;}
+  .rsoon .sm{opacity:.6;font-size:11.5px;}
+  .hint{font-size:11px;opacity:.5;margin-top:8px;text-align:center;color:var(--parch);}
+  .pager{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:14px;}
+  .pgi{font-size:12px;color:var(--parch);opacity:.7;}
+  .pager .btn-sm[disabled]{opacity:.35;pointer-events:none;}
+  @media(max-width:880px){ .dash-tiles{grid-template-columns:repeat(2,1fr);} .dash-lists{grid-template-columns:1fr;} }
+</style>
 <header class="topbar">
   <div class="brand" onclick="showSpace('atlas')">
     <span class="logo"><svg viewBox="0 0 48 48" fill="none"><g stroke="#e0c483" stroke-width="2"><circle cx="18" cy="27" r="5" fill="rgba(0,0,0,.2)"/><circle cx="29" cy="30" r="5" fill="rgba(0,0,0,.2)"/><circle cx="23" cy="38" r="5" fill="rgba(0,0,0,.2)"/><circle cx="24" cy="19" r="5" fill="rgba(0,0,0,.2)"/><path d="M24 14 q3 -8 11 -9" stroke-linecap="round"/></g></svg></span>
@@ -423,18 +458,18 @@
         <p class="vsub" id="resSub">—</p>
         <div id="resGate" class="placeholder" style="display:none"><p>Connectez-vous pour voir le résumé de votre cave.</p></div>
         <div id="resContent">
-          <div class="res-stats" id="resStats"></div>
-          <div class="res-grid">
-            <div class="card2"><div class="sect-h2">Par couleur</div><div id="resColor"></div></div>
-            <div class="card2"><div class="sect-h2">Par région</div><div id="resRegion"></div></div>
-            <div class="card2" id="resMapCard" style="cursor:pointer"><div class="sect-h2">Ma cave sur la carte ↗</div><div class="rmap" id="resMap"></div></div>
+          <div class="dash-tiles">
+            <div class="dtile"><div class="dt-big" id="dtBottles">0</div><div class="dt-lbl">Bouteilles en cave</div><div class="dt-sub" id="dtCuvees">0 cuvée</div></div>
+            <div class="dtile"><div class="dt-big" id="dtValue">0 <small>€</small></div><div class="dt-lbl">Valeur estimée</div></div>
+            <div class="dtile"><div class="dt-big" id="dtAoc">0</div><div class="dt-lbl">Appellations (AOC/AOP)</div><div class="dt-sub" id="dtRegions">0 région</div></div>
+            <div class="dtile dtile-chart"><div class="dt-lbl">Répartition par couleur</div><div id="resColor"></div></div>
           </div>
-          <div class="res-grid2">
-            <div class="card2"><div class="sect-h2">Maturité (apogée)</div><div id="resApogee"></div></div>
-            <div class="card2"><div class="sect-h2">À boire bientôt</div><div id="resSoon"></div></div>
+          <div class="dash-lists">
+            <div class="card2"><div class="sect-h2">À boire sous peu</div><div id="resSoon"></div><div id="resSoonPager" class="pager"></div></div>
+            <div class="card2"><div class="sect-h2">Répartition par région</div><div id="resRegion"></div></div>
           </div>
-        </div>
-        <div style="display:none"><button id="dashBtn"></button></div>
+          <div class="card2 dash-map" id="resMapCard" style="cursor:pointer"><div class="sect-h2">Ma cave sur la carte ↗</div><div class="rmap" id="resMap"></div></div>
+          <div style="display:none"><button id="dashBtn"></button></div>
       </div>
       <div class="csub" id="c-carte"><h2 class="vtitle">Carte de <em>ma cave</em></h2><p class="vsub">À venir.</p><div class="placeholder"><p>La carte filtrée sur vos bouteilles, avec navigation dans les sous-régions, arrivera prochainement.</p></div></div>
       <div class="csub" id="c-liste"><div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;"><div><h2 class="vtitle">Tous mes <em>vins</em></h2><p class="vsub">Votre cave, enregistrée sur votre compte.</p></div><button class="btn-q gold" onclick="showSub('c-ajout',document.querySelector('#cavesidebar .gold-item'))">&#65291; Ajouter</button></div><div id="listGate" class="placeholder" style="display:none"><p>Connectez-vous pour voir votre cave.</p></div><div class="listbar" id="listbar" style="display:none"><input id="fSearch" class="lsearch" placeholder="Rechercher un vin, domaine, appellation…"><select id="fColor" class="lsel"><option value="">Toutes couleurs</option><option value="rouge">Rouge</option><option value="blanc">Blanc</option><option value="rosé">Rosé</option><option value="effervescent">Effervescent</option><option value="doux">Doux/Liquoreux</option></select><select id="fRegion" class="lsel"><option value="">Toutes régions</option></select><select id="fSort" class="lsel"><option value="recent">Plus récents</option><option value="nom">Nom (A→Z)</option><option value="mil">Millésime</option><option value="note">Note</option><option value="prix">Prix</option></select><label class="lchk"><input type="checkbox" id="fHide0" checked> Masquer épuisées</label><span class="seg"><button id="vVign" class="on" type="button">Vignettes</button><button id="vList" type="button">Liste</button></span></div><div id="caveLoading" class="muted2" style="display:none">Chargement de votre cave&hellip;</div><div id="caveEmpty" class="placeholder" style="display:none"><p>Aucun vin pour l'instant. Ajoutez votre première bouteille pour démarrer votre cave.</p></div><div id="caveList" class="wines-cave"></div><div id="caveTable" style="display:none"></div><div id="caveNores" class="lnores" style="display:none">Aucun vin ne correspond à ces filtres.</div></div>
@@ -1669,7 +1704,7 @@ function showSub(sub, el){
     var bt=await sb.from('bottles').select('id,millesime,quantite,cave_id,casier_id,wines(nom)');
     if(cv.error){ console.warn('caves',cv.error); return; }
     EMPL_CAVES=cv.data||[]; EMPL_CASIERS=cs.data||[];
-    renderEmplacements(EMPL_CAVES, EMPL_CASIERS, (bt.data||[]));
+    renderEmplacements(EMPL_CAVES, EMPL_CASIERS, (bt.data||[]).filter(function(b){return (b.quantite||0)>0;}));
     fillEmplacementSelects();
   }
   function bq(bs){ return bs.reduce(function(s,b){return s+(b.quantite||0);},0); }
@@ -1754,11 +1789,12 @@ function showSub(sub, el){
     return '<svg viewBox="0 0 200 210"><defs><radialGradient id="rgg" cx="35%" cy="30%"><stop offset="0%" stop-color="#e6c878"/><stop offset="100%" stop-color="#bd923c"/></radialGradient></defs>'+
       '<path d="'+RPATH+'" fill="rgba(255,255,255,.04)" stroke="rgba(201,162,75,.4)" stroke-width="1" stroke-linejoin="round"></path>'+dots+'</svg>';
   }
+  var RESUME_SOON=[], resSoonPage=0;
   function renderResume(rows){
-    if(!document.getElementById('resStats')) return;
+    if(!document.getElementById('dtBottles')) return;
     var year=new Date().getFullYear();
     var totBottles=0, refs=0, value=0, cuvees=0;
-    var byColor={}, byRegion={}, byDom={}, apg={now:0,soon:0,keep:0}, soon=[];
+    var byColor={}, byRegion={}, aocSet={}, regSet={}, soon=[];
     rows.forEach(function(w){
       var has=false;
       (w.bottles||[]).forEach(function(b){
@@ -1767,48 +1803,47 @@ function showSub(sub, el){
         has=true; refs++; totBottles+=q;
         if(b.prix_achat!=null) value+=q*b.prix_achat;
         var ck=w.couleur||'autre'; byColor[ck]=(byColor[ck]||0)+q;
-        if(w.region) byRegion[w.region]=(byRegion[w.region]||0)+q;
-        if(w.domaine) byDom[w.domaine]=(byDom[w.domaine]||0)+q;
-        if(b.apogee_fin!=null){
-          if(b.apogee_fin<=year) apg.now+=q; else if(b.apogee_fin<=year+2) apg.soon+=q; else apg.keep+=q;
-          if(b.apogee_fin<=year+1) soon.push({nom:w.nom,dom:w.domaine,mil:b.millesime,fin:b.apogee_fin,col:w.couleur});
-        } else apg.keep+=q;
+        if(w.region){ byRegion[w.region]=(byRegion[w.region]||0)+q; regSet[w.region]=1; }
+        if(w.appellation) aocSet[w.appellation]=1;
+        if(b.apogee_fin!=null && b.apogee_fin<=year+1) soon.push({nom:w.nom,dom:w.domaine,mil:b.millesime,fin:b.apogee_fin,col:w.couleur});
       });
       if(has) cuvees++;
     });
-    document.getElementById('resSub').textContent=totBottles+' bouteille'+(totBottles>1?'s':'')+' · '+cuvees+' cuvée'+(cuvees>1?'s':'')+' · '+refs+' référence'+(refs>1?'s':'');
-    document.getElementById('resStats').innerHTML=
-      stat('Bouteilles',totBottles)+stat('Cuvées',cuvees)+stat('Références',refs)+stat('Valeur estimée',Math.round(value),'€');
-    // couleur
-    var corder=['rouge','blanc','rosé','effervescent','doux'];
-    var parts=[]; var total=0; corder.forEach(function(c){ if(byColor[c]){ parts.push({col:COLACC[c]||'#b0455a',val:byColor[c],lbl:COLLBL[c]||c}); total+=byColor[c]; } });
+    var nreg=Object.keys(regSet).length, naoc=Object.keys(aocSet).length;
+    document.getElementById('resSub').textContent=totBottles+' bouteille'+(totBottles>1?'s':'')+' \u00b7 '+cuvees+' cuv\u00e9e'+(cuvees>1?'s':'')+' \u00b7 '+refs+' r\u00e9f\u00e9rence'+(refs>1?'s':'');
+    document.getElementById('dtBottles').textContent=totBottles;
+    document.getElementById('dtCuvees').textContent=cuvees+' cuv\u00e9e'+(cuvees>1?'s':'');
+    document.getElementById('dtValue').innerHTML=Math.round(value)+' <small>\u20ac</small>';
+    document.getElementById('dtAoc').textContent=naoc;
+    document.getElementById('dtRegions').textContent=nreg+' r\u00e9gion'+(nreg>1?'s':'');
+    var corder=['rouge','blanc','ros\u00e9','effervescent','doux'];
+    var parts=[]; var total=0;
+    corder.forEach(function(c){ if(byColor[c]){ parts.push({col:COLACC[c]||'#b0455a',val:byColor[c],lbl:COLLBL[c]||c}); total+=byColor[c]; } });
     Object.keys(byColor).forEach(function(c){ if(corder.indexOf(c)<0){ parts.push({col:'#9a7b55',val:byColor[c],lbl:c}); total+=byColor[c]; } });
     var lg=parts.map(function(p){ return '<div class="rlg"><span class="dot" style="background:'+p.col+'"></span>'+esc(p.lbl)+'<span class="pct">'+Math.round(p.val/(total||1)*100)+'%</span></div>'; }).join('');
-    document.getElementById('resColor').innerHTML = total? ('<div style="display:flex;align-items:center;gap:18px"><div>'+donut(parts)+'</div><div style="flex:1">'+lg+'</div></div>') : '<p class="muted2">—</p>';
-    // région
+    document.getElementById('resColor').innerHTML = total? ('<div style="display:flex;align-items:center;gap:16px"><div style="width:92px;flex-shrink:0">'+donut(parts)+'</div><div style="flex:1">'+lg+'</div></div>') : '<p class="muted2">Aucune bouteille en cave.</p>';
     document.getElementById('resRegion').innerHTML = renderBars(byRegion,'#8e2f3e');
-    // carte
-    document.getElementById('resMap').innerHTML = (Object.keys(byRegion).length? miniMap(byRegion) : '<p class="muted2">—</p>') + '<div class="hint">Intensité = bouteilles par région</div>';
-    // apogée
-    document.getElementById('resApogee').innerHTML=
-      '<div class="rapg"><div class="a"><div class="n" style="color:#e296a6">'+apg.now+'</div><div class="c">à boire<br>cette année</div></div>'+
-      '<div class="a"><div class="n" style="color:#e7c07c">'+apg.soon+'</div><div class="c">d\'ici<br>2 ans</div></div>'+
-      '<div class="a"><div class="n" style="color:#a7c98a">'+apg.keep+'</div><div class="c">à<br>garder</div></div></div>';
-    // à boire bientôt
+    document.getElementById('resMap').innerHTML = (Object.keys(byRegion).length? miniMap(byRegion) : '<p class="muted2">\u2014</p>') + '<div class="hint">Intensit\u00e9 = bouteilles par r\u00e9gion</div>';
     soon.sort(function(a,b){return (a.fin||9999)-(b.fin||9999);});
-    if(soon.length){
-      document.getElementById('resSoon').innerHTML=soon.slice(0,6).map(function(o){
-        var pri=o.fin<year; return '<div class="rsoon"><span class="sw" style="background:'+(COLACC[o.col]||'#b0455a')+'"></span><div class="grow"><b>'+esc(o.nom)+'</b>'+(o.dom?' · '+esc(o.dom):'')+(o.mil?' '+o.mil:'')+' <span class="sm">· apogée jusqu\'en '+o.fin+(pri?' · priorité':'')+'</span></div></div>';
-      }).join('');
-    } else document.getElementById('resSoon').innerHTML='<p class="muted2">Rien à boire dans l\'immédiat — ou apogées non renseignées.</p>';
-    function stat(l,v,u){ return '<div class="rstat"><div class="l">'+l+'</div><div class="v">'+v+(u?'<small>'+u+'</small>':'')+'</div></div>'; }
+    RESUME_SOON=soon; resSoonPage=0; renderSoonPage();
     function renderBars(obj,color){
-      var keys=Object.keys(obj).sort(function(a,b){return obj[b]-obj[a];}).slice(0,6);
-      if(!keys.length) return '<p class="muted2">—</p>';
+      var keys=Object.keys(obj).sort(function(a,b){return obj[b]-obj[a];}).slice(0,8);
+      if(!keys.length) return '<p class="muted2">\u2014</p>';
       var mx=Math.max.apply(null,keys.map(function(k){return obj[k];}))||1;
       return keys.map(function(k){ return '<div class="rbar"><span class="nm" title="'+esc(k)+'">'+esc(k)+'</span><span class="tk"><span class="fl" style="width:'+Math.round(obj[k]/mx*100)+'%;background:'+color+'"></span></span><span class="q">'+obj[k]+'</span></div>'; }).join('');
     }
   }
+  function renderSoonPage(){
+    var host=document.getElementById('resSoon'), pg=document.getElementById('resSoonPager'); if(!host)return;
+    var arr=RESUME_SOON||[]; var per=5; var pages=Math.max(1,Math.ceil(arr.length/per));
+    if(resSoonPage>=pages)resSoonPage=pages-1; if(resSoonPage<0)resSoonPage=0;
+    if(!arr.length){ host.innerHTML='<p class="muted2">Rien \u00e0 boire dans l\'imm\u00e9diat \u2014 ou apog\u00e9es non renseign\u00e9es.</p>'; if(pg)pg.innerHTML=''; return; }
+    var year=new Date().getFullYear();
+    var slice=arr.slice(resSoonPage*per,(resSoonPage+1)*per);
+    host.innerHTML=slice.map(function(o){ var pri=o.fin<year; return '<div class="rsoon"><span class="sw" style="background:'+(COLACC[o.col]||'#b0455a')+'"></span><div class="grow"><b>'+esc(o.nom)+'</b>'+(o.dom?' \u00b7 '+esc(o.dom):'')+(o.mil?' '+o.mil:'')+' <span class="sm">\u00b7 apog\u00e9e jusqu\'en '+o.fin+(pri?' \u00b7 priorit\u00e9':'')+'</span></div></div>'; }).join('');
+    if(pg){ if(pages>1){ pg.innerHTML='<button class="btn-sm" id="soonPrev"'+(resSoonPage===0?' disabled':'')+'>\u2039 Pr\u00e9c.</button><span class="pgi">'+(resSoonPage+1)+' / '+pages+'</span><button class="btn-sm" id="soonNext"'+(resSoonPage>=pages-1?' disabled':'')+'>Suiv. \u203a</button>'; var pv=document.getElementById('soonPrev'),nx=document.getElementById('soonNext'); if(pv)pv.onclick=function(){resSoonPage--;renderSoonPage();}; if(nx)nx.onclick=function(){resSoonPage++;renderSoonPage();}; } else pg.innerHTML=''; }
+  }
+
   (function wireResMap(){ var c=document.getElementById('resMapCard'); if(c){ c.onclick=function(){ var it=document.querySelector('#cavesidebar .side-item[data-sub="c-carte"]'); showSub('c-carte',it); }; } })();
 
   // ===== v19 : vue détail + actions =====
